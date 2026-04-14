@@ -6,6 +6,7 @@ public class myResourceNotFoundException extends RuntimeException {
     String field;
     String fieldName;
     Long fieldId;
+    Integer id;
 
     public myResourceNotFoundException(String resourceName, String field, String fieldName) {
         super(String.format("%s not found with  %s: %s",resourceName,field,fieldName)); //this sets an exception message which can be later retreived from e.getMessage() by writing msg to the parent
@@ -20,6 +21,14 @@ public class myResourceNotFoundException extends RuntimeException {
         this.resourceName = resourceName;
         this.field = field;
         this.fieldId = fieldId;
+    }
+
+    public myResourceNotFoundException(String resourceName, String field, Integer id) {
+        super(String.format("%s not found with  %s: %d",resourceName,field,id));
+
+        this.resourceName = resourceName;
+        this.field = field;
+        this.id = id;
     }
 
     public myResourceNotFoundException() {

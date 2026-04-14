@@ -21,7 +21,7 @@ public class CartService {
     
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductService productService;
+    private final ProductServiceImpl productService;
     private final CustomerService customerService;
     
     /**
@@ -183,7 +183,6 @@ public class CartService {
                 .productId(product.getProductId())
                 .name(product.getName())
                 .description(product.getDescription())
-                .category(product.getCategory())
                 .price(product.getPrice())
                 .quantity(product.getQuantity())
                 .build();

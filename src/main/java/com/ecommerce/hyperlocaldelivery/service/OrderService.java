@@ -173,7 +173,6 @@ public class OrderService {
                 .productId(product.getProductId())
                 .name(product.getName())
                 .description(product.getDescription())
-                .category(product.getCategory())
                 .price(product.getPrice())
                 .quantity(product.getQuantity())
                 .build();
