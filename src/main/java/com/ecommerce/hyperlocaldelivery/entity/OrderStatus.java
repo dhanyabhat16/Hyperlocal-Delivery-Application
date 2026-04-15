@@ -1,6 +1,8 @@
 package com.ecommerce.hyperlocaldelivery.entity;
 
 public enum OrderStatus {
+    PENDING,
+    CONFIRMED,
     PLACED,
     PACKED,
     ASSIGNED,

@@ -18,8 +18,8 @@ public class Order {
     private Integer orderId;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -36,6 +36,10 @@ public class Order {
     
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "warehouse_id", nullable = false)
+    private Warehouse warehouse;
     
     @PrePersist
     protected void onCreate() {

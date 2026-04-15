@@ -1,11 +1,9 @@
 package com.ecommerce.hyperlocaldelivery.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.ecommerce.hyperlocaldelivery.model.Category;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,17 +20,31 @@ public class Product {
     private Integer productId;
     
     @Column(nullable = false)
+    @NotBlank
+    @Size(min=3,message="Product name must have atleast 3 chars")
     private String name;
     
     @Column(length = 500)
+    @NotBlank
+    @Size(min=4,message="Product name must have atleast 4 chars")
     private String description;
-    
-    @Column(nullable = false)
-    private String category;
-    
+
     @Column(nullable = false)
     private Double price;
+
+    private String image;
     
     @Column(nullable = false)
     private Integer quantity;
+
+    @Column(nullable = false)
+    private Boolean available = true;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    @ManyToOne
+    @JoinColumn(name = "warehouse_id", nullable = false)
+    private Warehouse warehouse;
 }
