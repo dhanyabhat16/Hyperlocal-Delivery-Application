@@ -6,8 +6,8 @@ import com.ecommerce.hyperlocaldelivery.model.Category;
 import com.ecommerce.hyperlocaldelivery.payload.CategoryDTO;
 import com.ecommerce.hyperlocaldelivery.payload.CategoryResponse;
 import com.ecommerce.hyperlocaldelivery.repository.CategoryRepository;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,15 +21,13 @@ import java.util.List;
 
 //that is it injects CategoryService categoryService = new CategoryServiceImpl(); in the controller class
 @Service
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService{
 
     //private List<Category> categories=new ArrayList<>();
 
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private ModelMapper modelMapper;
+    private final CategoryRepository categoryRepository;
+    private final ModelMapper modelMapper;
 
     @Override
     public CategoryResponse getAllCategories(Integer pageNumber,Integer pageSize,String sortBy,String sortOrder) {

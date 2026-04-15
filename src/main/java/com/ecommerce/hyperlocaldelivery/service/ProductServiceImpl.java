@@ -3,14 +3,16 @@ package com.ecommerce.hyperlocaldelivery.service;
 import com.ecommerce.hyperlocaldelivery.dto.ProductDTO;
 import com.ecommerce.hyperlocaldelivery.entity.Product;
 import com.ecommerce.hyperlocaldelivery.exception.APIExceptions;
+import com.ecommerce.hyperlocaldelivery.exception.InvalidOperationException;
 import com.ecommerce.hyperlocaldelivery.exception.ResourceNotFoundException;
 import com.ecommerce.hyperlocaldelivery.exception.myResourceNotFoundException;
+import com.ecommerce.hyperlocaldelivery.entity.Warehouse;
 import com.ecommerce.hyperlocaldelivery.model.Category;
 import com.ecommerce.hyperlocaldelivery.repository.CategoryRepository;
 import com.ecommerce.hyperlocaldelivery.repository.ProductRepository;
+import com.ecommerce.hyperlocaldelivery.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,14 +29,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class ProductServiceImpl implements ProductService {
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private ModelMapper modelMapper;
+    private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
+    private final WarehouseRepository warehouseRepository;
+    private final ModelMapper modelMapper;
 
     /**
      * Get all products
@@ -91,19 +89,25 @@ public class ProductServiceImpl implements ProductService {
      * Helper method to convert Product entity to DTO
      */
     public ProductDTO convertToDTO(Product product) {
-        return modelMapper.map(product,ProductDTO.class);
+        ProductDTO dto = modelMapper.map(product, ProductDTO.class);
+        if (product.getWarehouse() != null) {
+            dto.setWarehouseId(product.getWarehouse().getWarehouseId());
+        }
+        return dto;
     }
 
     @Override
-    public ProductDTO addProduct(ProductDTO productDTO, Long categoryId){
-        Product product=modelMapper.map(productDTO,Product.class);
-        Category category=categoryRepository.findById(categoryId)
+    public ProductDTO addProduct(ProductDTO productDTO, Long categoryId, Integer warehouseId){
+        Product product = modelMapper.map(productDTO, Product.class);
+        Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(
-                        ()-> new myResourceNotFoundException("Category","Category id",categoryId)
+                        () -> new myResourceNotFoundException("Category","Category id",categoryId)
                 );
+        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new myResourceNotFoundException("Warehouse","Warehouse id",warehouseId));
 
-        boolean noSamePro=true;
-        List<Product> products=category.getProducts();
+        boolean noSamePro = true;
+        List<Product> products = category.getProducts();
         for (Product value : products) {
             if (value.getName().equals(productDTO.getName())) {
                 noSamePro = false;
@@ -114,10 +118,38 @@ public class ProductServiceImpl implements ProductService {
             throw new APIExceptions("Product already exists");
         }
         product.setCategory(category);
+        product.setWarehouse(warehouse);
         product.setImage("product_image.png");
-        Product addedProd=productRepository.save(product);
-        ProductDTO resp=modelMapper.map(addedProd,ProductDTO.class);
+        product.setAvailable(true);
+        Product addedProd = productRepository.save(product);
+        ProductDTO resp = modelMapper.map(addedProd, ProductDTO.class);
+        resp.setWarehouseId(warehouseId);
         return resp;
+    }
+
+    @Override
+    public List<ProductDTO> searchByCategoryAndWarehouse(Long categoryId, Integer warehouseId) {
+        return searchByCategory(categoryId)
+                .stream()
+                .filter(p -> p.getWarehouseId() != null && p.getWarehouseId().equals(warehouseId))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ProductDTO> searchByNameAndWarehouse(String name, Integer warehouseId) {
+        return searchByName(name)
+                .stream()
+                .filter(p -> p.getWarehouseId() != null && p.getWarehouseId().equals(warehouseId))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ProductDTO getProductByIdAndWarehouse(Integer productId, Integer warehouseId) {
+        ProductDTO productDTO = getProductById(productId);
+        if (productDTO.getWarehouseId() == null || !productDTO.getWarehouseId().equals(warehouseId)) {
+            throw new InvalidOperationException("Product not available in this warehouse");
+        }
+        return productDTO;
     }
 
     public ProductDTO updateProduct(Integer productId, ProductDTO productDTO){
@@ -132,12 +164,65 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public ProductDTO updateProductForWarehouse(Integer productId, ProductDTO productDTO, Integer warehouseId) {
+        Product existing = productRepository.findById(productId)
+                .orElseThrow(() -> new myResourceNotFoundException("Product", "product id", productId));
+        if (!existing.getWarehouse().getWarehouseId().equals(warehouseId)) {
+            throw new InvalidOperationException("Warehouse can only modify its own products");
+        }
+        existing.setName(productDTO.getName());
+        existing.setDescription(productDTO.getDescription());
+        existing.setPrice(productDTO.getPrice());
+        existing.setQuantity(productDTO.getQuantity());
+        if (productDTO.getAvailable() != null) {
+            existing.setAvailable(productDTO.getAvailable());
+        }
+        return convertToDTO(productRepository.save(existing));
+    }
+
+    @Override
     public ProductDTO deleteProduct(Integer productId){
         Product existing=productRepository.findById(productId)
                 .orElseThrow(()->new myResourceNotFoundException("Product","product id",productId));
 
         productRepository.delete(existing);
         return modelMapper.map(existing,ProductDTO.class);
+    }
+
+    @Override
+    public ProductDTO deleteProductForWarehouse(Integer productId, Integer warehouseId) {
+        Product existing = productRepository.findById(productId)
+                .orElseThrow(() -> new myResourceNotFoundException("Product", "product id", productId));
+        if (!existing.getWarehouse().getWarehouseId().equals(warehouseId)) {
+            throw new InvalidOperationException("Warehouse can only delete its own products");
+        }
+        productRepository.delete(existing);
+        return convertToDTO(existing);
+    }
+
+    @Override
+    public ProductDTO updateProductStock(Integer productId, Integer quantity, Integer warehouseId) {
+        if (quantity < 0) {
+            throw new InvalidOperationException("Stock quantity cannot be negative");
+        }
+        Product existing = productRepository.findById(productId)
+                .orElseThrow(() -> new myResourceNotFoundException("Product", "product id", productId));
+        if (!existing.getWarehouse().getWarehouseId().equals(warehouseId)) {
+            throw new InvalidOperationException("Warehouse can only update stock for its own products");
+        }
+        existing.setQuantity(quantity);
+        return convertToDTO(productRepository.save(existing));
+    }
+
+    @Override
+    public ProductDTO updateProductAvailability(Integer productId, boolean available, Integer warehouseId) {
+        Product existing = productRepository.findById(productId)
+                .orElseThrow(() -> new myResourceNotFoundException("Product", "product id", productId));
+        if (!existing.getWarehouse().getWarehouseId().equals(warehouseId)) {
+            throw new InvalidOperationException("Warehouse can only update availability for its own products");
+        }
+        existing.setAvailable(available);
+        return convertToDTO(productRepository.save(existing));
     }
 
     @Override
@@ -168,5 +253,13 @@ public class ProductServiceImpl implements ProductService {
         Files.copy(image.getInputStream(), Paths.get(filePAth));
 
         return fileName;
+    }
+    
+    @Override
+    public List<ProductDTO> getProductsByWarehouse(com.ecommerce.hyperlocaldelivery.entity.Warehouse warehouse) {
+        return productRepository.findByWarehouse(warehouse)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 }

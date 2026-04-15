@@ -37,7 +37,14 @@ public class Product {
     @Column(nullable = false)
     private Integer quantity;
 
-    @ManyToOne//multiple products mapped to one product
+    @Column(nullable = false)
+    private Boolean available = true;
+
+    @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @ManyToOne
+    @JoinColumn(name = "warehouse_id", nullable = false)
+    private Warehouse warehouse;
 }

@@ -1,26 +1,33 @@
 package com.ecommerce.hyperlocaldelivery.controller;
 
-import com.ecommerce.hyperlocaldelivery.dto.*;
-import com.ecommerce.hyperlocaldelivery.service.CartService;
+import com.ecommerce.hyperlocaldelivery.dto.AddToCartDTO;
+import com.ecommerce.hyperlocaldelivery.dto.ApiResponseDTO;
+import com.ecommerce.hyperlocaldelivery.dto.CartDTO;
+import com.ecommerce.hyperlocaldelivery.dto.UpdateQuantityDTO;
+import com.ecommerce.hyperlocaldelivery.entity.User;
+import com.ecommerce.hyperlocaldelivery.service.ICartService;
+import com.ecommerce.hyperlocaldelivery.service.UserContextService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/carts")
+@RequestMapping("/api/customer/cart")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class CartController {
-    
-    private final CartService cartService;
+    private final ICartService cartService;
+    private final UserContextService userContextService;
     
     /**
-     * Get or create cart for customer
+     * Get user's cart
      */
-    @GetMapping("/{customerId}")
-    public ResponseEntity<ApiResponseDTO<CartDTO>> getOrCreateCart(@PathVariable Integer customerId) {
-        CartDTO cartDTO = cartService.getOrCreateCart(customerId);
+    @GetMapping
+    public ResponseEntity<ApiResponseDTO<CartDTO>> getCart() {
+        User user = userContextService.getCurrentUserOrThrow();
+        CartDTO cartDTO = cartService.getCart(user.getUserId());
         return ResponseEntity.ok(ApiResponseDTO.<CartDTO>builder()
                 .statusCode(200)
                 .message("Cart retrieved successfully")
@@ -30,46 +37,30 @@ public class CartController {
     }
     
     /**
-     * Add product to cart
+     * Add item to cart
      */
-    @PostMapping("/{customerId}/items")
-    public ResponseEntity<ApiResponseDTO<CartDTO>> addToCart(
-            @PathVariable Integer customerId,
-            @RequestBody AddToCartDTO addToCartDTO) {
-        CartDTO cartDTO = cartService.addToCart(customerId, addToCartDTO);
+    @PostMapping("/add")
+    public ResponseEntity<ApiResponseDTO<CartDTO>> addItemToCart(
+            @Valid @RequestBody AddToCartDTO addToCartDTO) {
+        User user = userContextService.getCurrentUserOrThrow();
+        CartDTO cartDTO = cartService.addItemToCart(user.getUserId(), addToCartDTO);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDTO.<CartDTO>builder()
                         .statusCode(201)
-                        .message("Product added to cart successfully")
+                        .message("Item added to cart successfully")
                         .data(cartDTO)
                         .success(true)
                         .build());
     }
     
     /**
-     * Update cart item quantity
-     */
-    @PutMapping("/{customerId}/items")
-    public ResponseEntity<ApiResponseDTO<CartDTO>> updateCartItemQuantity(
-            @PathVariable Integer customerId,
-            @RequestBody UpdateQuantityDTO updateDTO) {
-        CartDTO cartDTO = cartService.updateCartItemQuantity(customerId, updateDTO);
-        return ResponseEntity.ok(ApiResponseDTO.<CartDTO>builder()
-                .statusCode(200)
-                .message("Cart item quantity updated successfully")
-                .data(cartDTO)
-                .success(true)
-                .build());
-    }
-    
-    /**
      * Remove item from cart
      */
-    @DeleteMapping("/{customerId}/items/{cartItemId}")
-    public ResponseEntity<ApiResponseDTO<CartDTO>> removeFromCart(
-            @PathVariable Integer customerId,
+    @DeleteMapping("/remove/{cartItemId}")
+    public ResponseEntity<ApiResponseDTO<CartDTO>> removeItemFromCart(
             @PathVariable Integer cartItemId) {
-        CartDTO cartDTO = cartService.removeFromCart(customerId, cartItemId);
+        User user = userContextService.getCurrentUserOrThrow();
+        CartDTO cartDTO = cartService.removeItemFromCart(user.getUserId(), cartItemId);
         return ResponseEntity.ok(ApiResponseDTO.<CartDTO>builder()
                 .statusCode(200)
                 .message("Item removed from cart successfully")
@@ -79,14 +70,32 @@ public class CartController {
     }
     
     /**
+     * Update item quantity in cart
+     */
+    @PutMapping("/update/{cartItemId}")
+    public ResponseEntity<ApiResponseDTO<CartDTO>> updateItemQuantity(
+            @PathVariable Integer cartItemId,
+            @Valid @RequestBody UpdateQuantityDTO updateQuantityDTO) {
+        User user = userContextService.getCurrentUserOrThrow();
+        CartDTO cartDTO = cartService.updateItemQuantity(user.getUserId(), cartItemId, updateQuantityDTO);
+        return ResponseEntity.ok(ApiResponseDTO.<CartDTO>builder()
+                .statusCode(200)
+                .message("Cart item quantity updated successfully")
+                .data(cartDTO)
+                .success(true)
+                .build());
+    }
+    
+    /**
      * Clear entire cart
      */
-    @DeleteMapping("/{customerId}")
-    public ResponseEntity<ApiResponseDTO<Void>> clearCart(@PathVariable Integer customerId) {
-        cartService.clearCart(customerId);
-        return ResponseEntity.ok(ApiResponseDTO.<Void>builder()
+    @DeleteMapping("/clear")
+    public ResponseEntity<ApiResponseDTO<String>> clearCart() {
+        User user = userContextService.getCurrentUserOrThrow();
+        String result = cartService.clearCart(user.getUserId());
+        return ResponseEntity.ok(ApiResponseDTO.<String>builder()
                 .statusCode(200)
-                .message("Cart cleared successfully")
+                .message(result)
                 .success(true)
                 .build());
     }

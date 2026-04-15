@@ -5,7 +5,7 @@ import com.ecommerce.hyperlocaldelivery.payload.CategoryDTO;
 import com.ecommerce.hyperlocaldelivery.payload.CategoryResponse;
 import com.ecommerce.hyperlocaldelivery.service.CategoryService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,13 +15,11 @@ import org.springframework.web.bind.annotation.*;
 
 //presence of a controller is doing dependency inject via constructor
 //but u could also do a field inject using the @Autowired so you would not need constructor
-@RestController //=@Controller + @ResponseBody this tells that ths class handles both http requests and returns data
-@RequestMapping("/api") //since /api is common across all the apis
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
 public class CategoryController {
-
-
-    @Autowired //field injection
-    private CategoryService categoryService;
+    private final CategoryService categoryService;
 
     /*
     constructor injection
@@ -43,32 +41,22 @@ public class CategoryController {
         return new ResponseEntity<>(allCategories,HttpStatus.OK);
     }
 
-    @PostMapping("/admin/category")
+    @PostMapping("/admin/categories")
     public ResponseEntity<CategoryDTO> createCategory(@Valid @RequestBody CategoryDTO categoryDTO){
-        CategoryDTO res=categoryService.createCategory(categoryDTO);
+        CategoryDTO res = categoryService.createCategory(categoryDTO);
         return new ResponseEntity<>(res, HttpStatus.CREATED);
     }
 
-    @DeleteMapping("/admin/category/{categoryId}")
+    @DeleteMapping("/admin/categories/{categoryId}")
     public ResponseEntity<CategoryDTO> deleteCategory(@PathVariable Long categoryId){
-        //try{
-        CategoryDTO status=categoryService.deleteCategory(categoryId);
-            //return ResponseEntity.ok(status);
-            //return new ResponseEntity<>(status, HttpStatus.OK);
-        return ResponseEntity.status(HttpStatus.OK).body(status);//errors will be auto handled in the service layer and the custom exception handler if exists
-        //}catch (ResponseStatusException e){
-          //  return new ResponseEntity<>(e.getReason(),e.getStatusCode());
-        //}
+        CategoryDTO status = categoryService.deleteCategory(categoryId);
+        return ResponseEntity.ok(status);
     }
 
-    @PutMapping("/admin/category/{categoryId}")
-    public ResponseEntity<CategoryDTO> updateCategories(@RequestBody CategoryDTO categoryDTO,@PathVariable Long categoryId){
-        //try{
-        CategoryDTO updatedCategory=categoryService.updateCategory(categoryDTO,categoryId);
-        return new ResponseEntity<>(updatedCategory,HttpStatus.OK);
-        //}catch (ResponseStatusException e){
-            //return new ResponseEntity<>(e.getReason(),e.getStatusCode());
-        //}
+    @PutMapping("/admin/categories/{categoryId}")
+    public ResponseEntity<CategoryDTO> updateCategories(@Valid @RequestBody CategoryDTO categoryDTO, @PathVariable Long categoryId){
+        CategoryDTO updatedCategory = categoryService.updateCategory(categoryDTO, categoryId);
+        return ResponseEntity.ok(updatedCategory);
     }
 
 }

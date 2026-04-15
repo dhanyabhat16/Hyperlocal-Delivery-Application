@@ -1,53 +1,62 @@
 -- Sample Data Insert Script for Hyperlocal Delivery Application
--- This script populates sample data for testing the Customer Module
+
+-- Insert Warehouses
+INSERT INTO warehouses (name, city) VALUES
+('Bangalore Warehouse', 'Bangalore'),
+('Chennai Warehouse', 'Chennai'),
+('Hyderabad Warehouse', 'Hyderabad'),
+('Mumbai Warehouse', 'Mumbai');
+
+-- Insert Warehouse Managers
+INSERT INTO users (name, email, password, role, warehouse_id) VALUES
+('Manager Bangalore', 'manager.bangalore@example.com', '$2a$10$examplehashedpassword', 'WAREHOUSE', 1),
+('Manager Chennai', 'manager.chennai@example.com', '$2a$10$examplehashedpassword', 'WAREHOUSE', 2),
+('Manager Hyderabad', 'manager.hyderabad@example.com', '$2a$10$examplehashedpassword', 'WAREHOUSE', 3),
+('Manager Mumbai', 'manager.mumbai@example.com', '$2a$10$examplehashedpassword', 'WAREHOUSE', 4);
+
+-- Update warehouses with manager_id
+UPDATE warehouses SET manager_id = 1 WHERE warehouse_id = 1;
+UPDATE warehouses SET manager_id = 2 WHERE warehouse_id = 2;
+UPDATE warehouses SET manager_id = 3 WHERE warehouse_id = 3;
+UPDATE warehouses SET manager_id = 4 WHERE warehouse_id = 4;
 
 -- Insert Customers
-INSERT INTO users (dtype, name, email, password, role) VALUES 
-('Customer', 'Rajesh Kumar', 'rajesh@example.com', 'password123', 'CUSTOMER'),
-('Customer', 'Priya Singh', 'priya@example.com', 'password123', 'CUSTOMER'),
-('Customer', 'Arun Patel', 'arun@example.com', 'password123', 'CUSTOMER'),
-('Customer', 'Deepika Gupta', 'deepika@example.com', 'password123', 'CUSTOMER');
+INSERT INTO users (name, email, password, role) VALUES
+('Rajesh Kumar', 'rajesh@example.com', '$2a$10$examplehashedpassword', 'CUSTOMER'),
+('Priya Singh', 'priya@example.com', '$2a$10$examplehashedpassword', 'CUSTOMER'),
+('Arun Patel', 'arun@example.com', '$2a$10$examplehashedpassword', 'CUSTOMER'),
+('Deepika Gupta', 'deepika@example.com', '$2a$10$examplehashedpassword', 'CUSTOMER');
 
-INSERT INTO customers (address, user_id) VALUES 
-('123 Maple Street, Bangalore', 1),
-('456 Oak Avenue, Mumbai', 2),
-('789 Pine Road, Delhi', 3),
-('321 Elm Lane, Pune', 4);
+-- Insert Addresses
+INSERT INTO address (street, city, door_no, building_name, user_id) VALUES
+('123 Maple Street', 'Bangalore', 'A-101', 'Green Apartments', 5),
+('456 Oak Avenue', 'Mumbai', 'B-202', 'Blue Towers', 6),
+('789 Pine Road', 'Chennai', 'C-303', 'Red Villas', 7),
+('321 Elm Lane', 'Hyderabad', 'D-404', 'Yellow Complex', 8);
 
--- Insert Products
-INSERT INTO products (name, description, category, price, quantity) VALUES 
-('Fresh Tomatoes', 'Organic fresh tomatoes from local farms', 'Vegetables', 50.00, 100),
-('Whole Milk', 'Fresh pasteurized milk, 1 liter', 'Dairy', 60.00, 150),
-('Brown Bread', 'Whole wheat brown bread', 'Bakery', 40.00, 80),
-('Eggs (Half Dozen)', 'Farm fresh eggs', 'Dairy', 35.00, 200),
-('Chicken Breast', 'Fresh chicken breast, 500g', 'Meat', 250.00, 50),
-('Rice (5kg)', 'Basmati rice, Premium quality', 'Grains', 300.00, 60),
-('Cooking Oil (1L)', 'Refined vegetable oil', 'Oils & Condiments', 120.00, 75),
-('Sugar (1kg)', 'Refined granulated sugar', 'Staples', 45.00, 100),
-('Salt (500g)', 'Iodized table salt', 'Staples', 20.00, 150),
-('Apples (1kg)', 'Fresh red apples', 'Fruits', 80.00, 40);
+-- Insert Categories (assuming categories table exists)
+INSERT INTO categories (name) VALUES
+('Vegetables'),
+('Dairy'),
+('Bakery'),
+('Meat'),
+('Grains'),
+('Oils & Condiments'),
+('Staples'),
+('Fruits');
 
--- Insert Carts (Optional - will be created dynamically)
--- INSERT INTO carts (customer_id) VALUES (1), (2), (3), (4);
-
--- Insert Sample Cart Items (Optional - for demonstration)
--- INSERT INTO cart_items (cart_id, product_id, quantity, price) VALUES 
--- (1, 1, 2, 50.00),
--- (1, 2, 1, 60.00),
--- (2, 5, 1, 250.00),
--- (2, 6, 1, 300.00);
-
--- Insert Sample Order (Optional - for demonstration)
--- INSERT INTO orders (customer_id, status, total_amount, created_at, updated_at) VALUES 
--- (1, 'PLACED', 160.00, NOW(), NOW());
-
--- INSERT INTO order_items (order_id, product_id, quantity, price) VALUES 
--- (1, 1, 2, 50.00),
--- (1, 2, 1, 60.00);
-
--- Display Sample Records
-SELECT 'Customers' AS 'Section';
-SELECT user_id AS 'ID', name, email, address FROM users u 
+-- Insert Products (assigned to warehouses)
+INSERT INTO products (name, description, price, quantity, category_id, warehouse_id) VALUES
+('Fresh Tomatoes', 'Organic fresh tomatoes from local farms', 50.00, 100, 1, 1),
+('Whole Milk', 'Fresh pasteurized milk, 1 liter', 60.00, 150, 2, 1),
+('Brown Bread', 'Whole wheat brown bread', 40.00, 80, 3, 1),
+('Eggs (Half Dozen)', 'Farm fresh eggs', 35.00, 200, 2, 2),
+('Chicken Breast', 'Fresh chicken breast, 500g', 250.00, 50, 4, 2),
+('Rice (5kg)', 'Basmati rice, Premium quality', 300.00, 60, 5, 3),
+('Cooking Oil (1L)', 'Refined vegetable oil', 120.00, 75, 6, 3),
+('Sugar (1kg)', 'Refined granulated sugar', 45.00, 100, 7, 4),
+('Salt (500g)', 'Iodized table salt', 20.00, 150, 7, 4),
+('Apples (1kg)', 'Fresh red apples', 80.00, 40, 8, 1); 
 LEFT JOIN customers c ON u.user_id = c.user_id WHERE user_id <= 4;
 
 SELECT '' AS '';
