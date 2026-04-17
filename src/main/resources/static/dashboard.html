@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+<div class="flex h-screen">
+
+    <!-- SIDEBAR -->
+    <div class="w-64 bg-slate-800 text-white p-5">
+        <h2 class="text-xl font-bold mb-6">Hyperlocal</h2>
+
+        <p id="roleTitle" class="mb-6 text-sm text-gray-300"></p>
+
+        <button onclick="logout()"
+            class="bg-red-500 px-3 py-2 rounded w-full hover:bg-red-600">
+            Logout
+        </button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex-1 p-6 overflow-auto">
+
+        <h1 class="text-2xl font-semibold mb-4" id="pageTitle"></h1>
+
+        <div id="content" class="space-y-4"></div>
+
+    </div>
+
+</div>
+
+<script>
+const BASE = "http://localhost:8080/hyperlocaldelivery/api";
+const role = localStorage.getItem("role");
+const userId = localStorage.getItem("userId") || 9;
+
+document.getElementById("roleTitle").innerText =
+    "Logged in as: " + role.toUpperCase();
+
+document.getElementById("pageTitle").innerText =
+    role.toUpperCase() + " DASHBOARD";
+
+// ROUTING
+if (role === "DELIVERY") loadDelivery();
+else if (role === "CUSTOMER") loadCustomer();
+else if (role === "WAREHOUSE") loadWarehouse();
+else loadAdmin();
+// ================= DELIVERY =================
+function loadDelivery() {
+    const userId = localStorage.getItem("userId");
+
+    Promise.all([
+        fetch("/hyperlocaldelivery/api/delivery/available", {
+    headers: {
+        "Authorization": "Bearer " + localStorage.getItem("token")
+    }
+
+}).then(r => r.json()),
+        fetch(`/hyperlocaldelivery/api/delivery/my-orders?partnerId=${userId}`, {
+    headers: {
+        "Authorization": "Bearer " + localStorage.getItem("token")
+    }
+}).then(r => r.json())
+    ])
+    .then(([availableRes, assigned]) => {
+
+        const available = availableRes.data;
+
+        let html = "<h2 class='text-lg font-bold mb-2'>Available Orders</h2>";
+
+        // 🟦 AVAILABLE ORDERS
+        if (!available || available.length === 0) {
+            html += "<p>No available orders</p>";
+        } else {
+            available.forEach(o => {
+                html += `
+                <div class="bg-white p-4 rounded shadow mb-3">
+                    <p><b>Order #${o.orderId}</b></p>
+                    <p>Status: ${o.status}</p>
+                    <p>Amount: ₹${o.totalAmount}</p>
+
+                    <button onclick="acceptOrder(${o.orderId})"
+                        class="bg-blue-500 text-white px-3 py-1 rounded mt-2">
+                        Accept Order
+                    </button>
+                </div>`;
+            });
+        }
+
+        // 🟩 ASSIGNED ORDERS
+        html += "<h2 class='text-lg font-bold mt-6 mb-2'>My Deliveries</h2>";
+
+        if (!assigned || assigned.length === 0) {
+            html += "<p>No assigned deliveries</p>";
+        } else {
+            assigned.forEach(d => {
+                html += `
+                <div class="bg-white p-4 rounded shadow mb-3">
+                    <p><b>Order #${d.orderId}</b></p>
+                    <p>Status: ${d.status}</p>
+
+                    <button onclick="updateStatus(${d.deliveryId}, 'IN_TRANSIT')"
+                        class="bg-yellow-500 text-white px-3 py-1 rounded mt-2">
+                        In Transit
+                    </button>
+
+                    <button onclick="updateStatus(${d.deliveryId}, 'DELIVERED')"
+                        class="bg-green-500 text-white px-3 py-1 rounded mt-2 ml-2">
+                        Delivered
+                    </button>
+                </div>`;
+            });
+        }
+
+        document.getElementById("content").innerHTML = html;
+    })
+    .catch(err => console.error(err));
+}
+
+function getStatusColor(status) {
+    if (status === "DELIVERED") return "bg-green-500";
+    if (status === "OUT_FOR_DELIVERY") return "bg-yellow-500";
+    return "bg-gray-500";
+}
+
+function acceptOrder(orderId) {
+    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
+
+    fetch(`/hyperlocaldelivery/api/delivery/assign?orderId=${orderId}&partnerId=${userId}`, {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    }).then(() => loadDelivery());
+}
+
+function updateStatus(deliveryId, status) {
+    const token = localStorage.getItem("token");
+
+    fetch(`/hyperlocaldelivery/api/delivery/update-status/${deliveryId}?status=${status}`, {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    }).then(() => loadDelivery());
+}
+// ================= CUSTOMER =================
+function loadCustomer() {
+    fetch(`${BASE}/customer/orders`, {
+    headers: {
+        "Authorization": "Bearer " + localStorage.getItem("token")
+    }
+    })
+        .then(r => r.json())
+        .then(data => {
+
+            let html = "<h2 class='font-semibold'>My Orders</h2>";
+
+            data.data.forEach(o => {
+                html += `
+                <div class="bg-white p-4 rounded shadow">
+                    <p><b>Order #${o.orderId}</b></p>
+                    <p>Status: ${o.status}</p>
+                    <p>Amount: Rs ${o.totalAmount}</p>
+                </div>`;
+            });
+
+            document.getElementById("content").innerHTML = html;
+        });
+}
+
+// ================= WAREHOUSE =================
+function loadWarehouse() {
+    fetch(`${BASE}/warehouse/orders`)
+        .then(r => r.json())
+        .then(data => {
+
+            let html = "<h2 class='font-semibold'>Warehouse Orders</h2>";
+
+            data.forEach(o => {
+                html += `
+                <div class="bg-white p-4 rounded shadow">
+                    <p><b>Order #${o.orderId}</b></p>
+                    <p>Status: ${o.status}</p>
+                </div>`;
+            });
+
+            document.getElementById("content").innerHTML = html;
+        });
+}
+
+// ================= ADMIN =================
+function loadAdmin() {
+    document.getElementById("content").innerHTML =
+        "<div class='bg-white p-4 rounded shadow'>Admin panel coming soon</div>";
+}
+
+// ================= LOGOUT =================
+function logout() {
+    localStorage.clear();
+    window.location.href = "index.html";
+}
+</script>
+</body>
+</html>

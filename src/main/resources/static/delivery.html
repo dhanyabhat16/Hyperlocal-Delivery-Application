@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delivery Partner Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+        h2 {
+            color: #333;
+        }
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>🚚 Delivery Partner Dashboard</h2>
+
+<label>Partner ID:</label>
+<input type="number" id="partnerId" value="9">
+<button onclick="loadOrders()">Load My Orders</button>
+
+<div id="orders"></div>
+
+<script>
+const BASE_URL = "http://localhost:8080/hyperlocaldelivery/api/delivery";
+
+function loadOrders() {
+    const partnerId = document.getElementById("partnerId").value;
+
+    fetch(`${BASE_URL}/my-orders?partnerId=${partnerId}`)
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById("orders");
+            container.innerHTML = "";
+
+            data.forEach(d => {
+                const div = document.createElement("div");
+                div.className = "card";
+
+                div.innerHTML = `
+                    <b>Delivery ID:</b> ${d.deliveryId}<br>
+                    <b>Order ID:</b> ${d.orderId}<br>
+                    <b>Status:</b> ${d.status}<br>
+                    <button onclick="acceptOrder(${d.deliveryId})">Accept</button>
+                    <button onclick="updateStatus(${d.deliveryId}, 'OUT_FOR_DELIVERY')">Out for Delivery</button>
+                    <button onclick="updateStatus(${d.deliveryId}, 'DELIVERED')">Delivered</button>
+                `;
+
+                container.appendChild(div);
+            });
+        });
+}
+
+function acceptOrder(id) {
+    fetch(`${BASE_URL}/accept/${id}`)
+        .then(() => loadOrders());
+}
+
+function updateStatus(id, status) {
+    fetch(`${BASE_URL}/update-status/${id}?status=${status}`)
+        .then(() => loadOrders());
+}
+</script>
+
+</body>
+</html>

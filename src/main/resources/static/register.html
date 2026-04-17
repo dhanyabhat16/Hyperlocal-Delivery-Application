@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+<form onsubmit="register(event); return false;">
+
+    <h2 class="text-xl font-semibold mb-4 text-center">Register</h2>
+
+    <input id="name" placeholder="Name"
+        class="w-full mb-3 p-2 border rounded" required>
+
+    <input id="email" type="email" placeholder="Email"
+        class="w-full mb-3 p-2 border rounded" required>
+
+    <input id="password" type="password" placeholder="Password"
+        class="w-full mb-3 p-2 border rounded" required>
+    <input id="city" placeholder="City"
+    class="w-full mb-3 p-2 border rounded" required>
+    <select id="role" class="w-full mb-3 p-2 border rounded">
+        <option value="CUSTOMER">Customer</option>
+        <option value="DELIVERY">Delivery</option>
+        <option value="WAREHOUSE">Warehouse</option>
+    </select>
+
+    <button type="submit"
+        class="w-full bg-green-500 text-white py-2 rounded">
+        Register
+    </button>
+
+    <p id="msg" class="text-sm mt-2"></p>
+
+</form>
+
+<script>
+function register(e) {
+    e.preventDefault();
+
+    fetch("/hyperlocaldelivery/api/public/auth/register", {
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: name.value,
+            email: email.value,
+            password: password.value,
+            role: role.value
+        })
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById("msg").innerText = "Registered successfully";
+    });
+}
+</script>
+<script src="script.js"></script>
+</body>
+</html>
