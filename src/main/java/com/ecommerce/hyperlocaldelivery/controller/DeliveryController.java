@@ -2,6 +2,8 @@ package com.ecommerce.hyperlocaldelivery.controller;
 
 import com.ecommerce.hyperlocaldelivery.entity.OrderStatus;
 import com.ecommerce.hyperlocaldelivery.service.IDeliveryService;
+import com.ecommerce.hyperlocaldelivery.service.IOrderService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +14,8 @@ public class DeliveryController {
 
     @Autowired
     private IDeliveryService deliveryService;
+    @Autowired
+    private IOrderService orderService;
 
     // Get all assigned orders for delivery partner
     @GetMapping("/my-orders")
@@ -39,4 +43,10 @@ public class DeliveryController {
                 deliveryService.updateStatus(deliveryId, status)
         );
     }
+    @GetMapping("/available")
+    public ResponseEntity<?> getAvailableOrders() {
+    return ResponseEntity.ok(
+            orderService.getAvailableOrders()
+    );
+}
 }

@@ -228,7 +228,13 @@ public class OrderServiceImpl implements IOrderService {
         order.setStatus(OrderStatus.CANCELLED);
         return convertToDTO(orderRepository.save(order));
     }
-
+    @Override
+    public List<OrderDTO> getAvailableOrders() {
+    return orderRepository.findUnassignedOrders()
+            .stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+}
     @Override
     public String getOrderStatus(Integer orderId, Integer userId) {
         User user = userRepository.findById(userId)
@@ -298,6 +304,7 @@ public class OrderServiceImpl implements IOrderService {
                         .price(item.getPrice())
                         .build())
                 .collect(Collectors.toList());
+                
         
         return OrderDTO.builder()
                 .orderId(order.getOrderId())
