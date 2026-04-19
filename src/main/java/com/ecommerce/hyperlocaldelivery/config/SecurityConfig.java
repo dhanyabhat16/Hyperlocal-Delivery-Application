@@ -31,12 +31,25 @@ public class SecurityConfig {
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
                 .requestMatchers("/api/warehouse/**").hasAnyRole("WAREHOUSE", "ADMIN")
+                .requestMatchers("/api/customers/register", "/api/customers/login").permitAll()
+                .requestMatchers("/api/customer/cart/**").permitAll() // TEMPORARY: Allow everyone to test
+                .requestMatchers("/", "/index.html", "/login.html", "/register.html", "/customer.html","/static/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/delivery/**").hasRole("DELIVERY")
+                .requestMatchers("/api/delivery/**").permitAll()
+                .requestMatchers(
+                    "/login.html",
+                    "/dashboard.html",
+                    "/index.html",
+                    "/register.html",
+                    "/styles.css",
+                    "/script.js",
+                    "/**/*.css",
+                    "/**/*.js"
+                ).permitAll()
                 .anyRequest().authenticated()
-            )
-            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                )
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

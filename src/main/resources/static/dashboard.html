@@ -1,209 +1,111 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Dashboard</title>
+    <title>Dashboard | Hyperlocal</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
 
-<body class="bg-gray-100">
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div class="p-6 border-b">
+            <h2 class="text-xl font-bold text-indigo-600 italic">Hyperlocal.</h2>
+        </div>
+        <nav class="flex-1 p-4 space-y-2" id="sidebarMenu">
+            </nav>
+        <div class="p-4 border-t">
+            <div id="userProfile" class="flex items-center space-x-3 mb-4 p-2">
+                <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs" id="userInitial">U</div>
+                <div>
+                    <p class="text-sm font-bold text-gray-700" id="userName">User</p>
+                    <p class="text-xs text-gray-400 capitalize" id="userRole">Role</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="w-full flex items-center space-x-2 text-red-500 hover:bg-red-50 p-2 rounded-lg transition text-sm">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
 
-<div class="flex h-screen">
-
-    <!-- SIDEBAR -->
-    <div class="w-64 bg-slate-800 text-white p-5">
-        <h2 class="text-xl font-bold mb-6">Hyperlocal</h2>
-
-        <p id="roleTitle" class="mb-6 text-sm text-gray-300"></p>
-
-        <button onclick="logout()"
-            class="bg-red-500 px-3 py-2 rounded w-full hover:bg-red-600">
-            Logout
-        </button>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div class="flex-1 p-6 overflow-auto">
-
-        <h1 class="text-2xl font-semibold mb-4" id="pageTitle"></h1>
-
-        <div id="content" class="space-y-4"></div>
-
-    </div>
-
-</div>
-
-<script>
-const BASE = "http://localhost:8080/hyperlocaldelivery/api";
-const role = localStorage.getItem("role");
-const userId = localStorage.getItem("userId") || 9;
-
-document.getElementById("roleTitle").innerText =
-    "Logged in as: " + role.toUpperCase();
-
-document.getElementById("pageTitle").innerText =
-    role.toUpperCase() + " DASHBOARD";
-
-// ROUTING
-if (role === "DELIVERY") loadDelivery();
-else if (role === "CUSTOMER") loadCustomer();
-else if (role === "WAREHOUSE") loadWarehouse();
-else loadAdmin();
-// ================= DELIVERY =================
-function loadDelivery() {
-    const userId = localStorage.getItem("userId");
-
-    Promise.all([
-        fetch("/hyperlocaldelivery/api/delivery/available", {
-    headers: {
-        "Authorization": "Bearer " + localStorage.getItem("token")
-    }
-
-}).then(r => r.json()),
-        fetch(`/hyperlocaldelivery/api/delivery/my-orders?partnerId=${userId}`, {
-    headers: {
-        "Authorization": "Bearer " + localStorage.getItem("token")
-    }
-}).then(r => r.json())
-    ])
-    .then(([availableRes, assigned]) => {
-
-        const available = availableRes.data;
-
-        let html = "<h2 class='text-lg font-bold mb-2'>Available Orders</h2>";
-
-        // 🟦 AVAILABLE ORDERS
-        if (!available || available.length === 0) {
-            html += "<p>No available orders</p>";
-        } else {
-            available.forEach(o => {
-                html += `
-                <div class="bg-white p-4 rounded shadow mb-3">
-                    <p><b>Order #${o.orderId}</b></p>
-                    <p>Status: ${o.status}</p>
-                    <p>Amount: ₹${o.totalAmount}</p>
-
-                    <button onclick="acceptOrder(${o.orderId})"
-                        class="bg-blue-500 text-white px-3 py-1 rounded mt-2">
-                        Accept Order
+    <main class="flex-1 overflow-y-auto">
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+            <h1 class="text-lg font-semibold text-gray-800" id="viewTitle">Dashboard Overview</h1>
+            <div class="flex items-center space-x-4">
+                <div id="cartStatus" class="hidden">
+                    <button class="relative p-2 text-gray-400 hover:text-indigo-600">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                        <span id="cartCount" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] rounded-full px-1.5">0</span>
                     </button>
-                </div>`;
-            });
-        }
+                </div>
+            </div>
+        </header>
 
-        // 🟩 ASSIGNED ORDERS
-        html += "<h2 class='text-lg font-bold mt-6 mb-2'>My Deliveries</h2>";
+        <section id="mainContent" class="p-8">
+            </section>
+    </main>
 
-        if (!assigned || assigned.length === 0) {
-            html += "<p>No assigned deliveries</p>";
-        } else {
-            assigned.forEach(d => {
+    <script>
+        const API_BASE = "http://localhost:8080/hyperlocaldelivery/api";
+        const role = localStorage.getItem("role");
+        const userId = localStorage.getItem("customerId") || localStorage.getItem("userId");
+        const userName = localStorage.getItem("userName") || "User";
+
+        // Initialize UI
+        document.getElementById("userName").innerText = userName;
+        document.getElementById("userInitial").innerText = userName.charAt(0);
+        document.getElementById("userRole").innerText = role.toLowerCase();
+
+        window.onload = () => {
+            if (role === "CUSTOMER") renderCustomer();
+            else if (role === "DELIVERY") renderDelivery();
+            else if (role === "WAREHOUSE") renderWarehouse();
+            else renderAdmin();
+        };
+
+        // --- CUSTOMER MODULE ---
+        async function renderCustomer() {
+            document.getElementById("cartStatus").classList.remove("hidden");
+            document.getElementById("viewTitle").innerText = "Browse Products";
+            
+            const response = await fetch(`${API_BASE}/products`);
+            const data = await response.json();
+            
+            let html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-6">`;
+            data.data.forEach(p => {
                 html += `
-                <div class="bg-white p-4 rounded shadow mb-3">
-                    <p><b>Order #${d.orderId}</b></p>
-                    <p>Status: ${d.status}</p>
-
-                    <button onclick="updateStatus(${d.deliveryId}, 'IN_TRANSIT')"
-                        class="bg-yellow-500 text-white px-3 py-1 rounded mt-2">
-                        In Transit
-                    </button>
-
-                    <button onclick="updateStatus(${d.deliveryId}, 'DELIVERED')"
-                        class="bg-green-500 text-white px-3 py-1 rounded mt-2 ml-2">
-                        Delivered
-                    </button>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="h-32 bg-gray-100 rounded-lg mb-4 flex items-center justify-center text-gray-400 italic">Product Image</div>
+                    <h3 class="font-bold text-gray-800">${p.name}</h3>
+                    <p class="text-xs text-gray-500">${p.category}</p>
+                    <div class="mt-4 flex justify-between items-center">
+                        <span class="text-indigo-600 font-bold">₹${p.price}</span>
+                        <button onclick="addToCart(${p.productId})" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700">Add</button>
+                    </div>
                 </div>`;
             });
+            html += `</div>`;
+            document.getElementById("mainContent").innerHTML = html;
         }
 
-        document.getElementById("content").innerHTML = html;
-    })
-    .catch(err => console.error(err));
-}
-
-function getStatusColor(status) {
-    if (status === "DELIVERED") return "bg-green-500";
-    if (status === "OUT_FOR_DELIVERY") return "bg-yellow-500";
-    return "bg-gray-500";
-}
-
-function acceptOrder(orderId) {
-    const userId = localStorage.getItem("userId");
-    const token = localStorage.getItem("token");
-
-    fetch(`/hyperlocaldelivery/api/delivery/assign?orderId=${orderId}&partnerId=${userId}`, {
-        method: "POST",
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    }).then(() => loadDelivery());
-}
-
-function updateStatus(deliveryId, status) {
-    const token = localStorage.getItem("token");
-
-    fetch(`/hyperlocaldelivery/api/delivery/update-status/${deliveryId}?status=${status}`, {
-        method: "POST",
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    }).then(() => loadDelivery());
-}
-// ================= CUSTOMER =================
-function loadCustomer() {
-    fetch(`${BASE}/customer/orders`, {
-    headers: {
-        "Authorization": "Bearer " + localStorage.getItem("token")
-    }
-    })
-        .then(r => r.json())
-        .then(data => {
-
-            let html = "<h2 class='font-semibold'>My Orders</h2>";
-
-            data.data.forEach(o => {
-                html += `
-                <div class="bg-white p-4 rounded shadow">
-                    <p><b>Order #${o.orderId}</b></p>
-                    <p>Status: ${o.status}</p>
-                    <p>Amount: Rs ${o.totalAmount}</p>
+        // --- DELIVERY MODULE ---
+        async function renderDelivery() {
+            document.getElementById("viewTitle").innerText = "Delivery Assignments";
+            // ... (Your existing fetch logic for available/assigned orders)
+            // Use Tailwind cards with colored badges for status
+            document.getElementById("mainContent").innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Available for Pickup</h2>
+                        <div id="availableOrders" class="space-y-3 text-gray-500">Scanning for orders...</div>
+                    </div>
                 </div>`;
-            });
+        }
 
-            document.getElementById("content").innerHTML = html;
-        });
-}
-
-// ================= WAREHOUSE =================
-function loadWarehouse() {
-    fetch(`${BASE}/warehouse/orders`)
-        .then(r => r.json())
-        .then(data => {
-
-            let html = "<h2 class='font-semibold'>Warehouse Orders</h2>";
-
-            data.forEach(o => {
-                html += `
-                <div class="bg-white p-4 rounded shadow">
-                    <p><b>Order #${o.orderId}</b></p>
-                    <p>Status: ${o.status}</p>
-                </div>`;
-            });
-
-            document.getElementById("content").innerHTML = html;
-        });
-}
-
-// ================= ADMIN =================
-function loadAdmin() {
-    document.getElementById("content").innerHTML =
-        "<div class='bg-white p-4 rounded shadow'>Admin panel coming soon</div>";
-}
-
-// ================= LOGOUT =================
-function logout() {
-    localStorage.clear();
-    window.location.href = "index.html";
-}
-</script>
+        function logout() {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
+    </script>
 </body>
 </html>

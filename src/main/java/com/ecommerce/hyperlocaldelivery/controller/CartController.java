@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/customer/cart")
+//@RequestMapping("/api/customer/customer-cart")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class CartController {
@@ -24,7 +24,7 @@ public class CartController {
     /**
      * Get user's cart
      */
-    @GetMapping
+    @GetMapping("/api/customer/cart")
     public ResponseEntity<ApiResponseDTO<CartDTO>> getCart() {
         User user = userContextService.getCurrentUserOrThrow();
         CartDTO cartDTO = cartService.getCart(user.getUserId());
@@ -35,11 +35,14 @@ public class CartController {
                 .success(true)
                 .build());
     }
-    
+    @GetMapping("/api/customer/cart/debug")
+        public ResponseEntity<String> debugCart() {
+        return ResponseEntity.ok("The Cart Controller is ALIVE!");
+        }
     /**
      * Add item to cart
      */
-    @PostMapping("/add")
+    @PostMapping("/api/customer/cart/add")
     public ResponseEntity<ApiResponseDTO<CartDTO>> addItemToCart(
             @Valid @RequestBody AddToCartDTO addToCartDTO) {
         User user = userContextService.getCurrentUserOrThrow();

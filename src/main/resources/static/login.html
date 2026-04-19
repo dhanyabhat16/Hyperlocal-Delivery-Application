@@ -1,59 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Login</title>
+    <title>Login | Hyperlocal</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; }</style>
 </head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen">
 
-<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-slate-900">Welcome Back</h2>
+            <p class="text-slate-500 mt-2">Please enter your details to sign in</p>
+        </div>
+        
+        <form onsubmit="handleLogin(event)" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Email Address</label>
+                <input id="email" type="email" required 
+                    class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none">
+            </div>
 
-<form onsubmit="login(event); return false;">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Password</label>
+                <input id="password" type="password" required 
+                    class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none">
+            </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-center">Login</h2>
+            <button type="submit" 
+                class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 active:transform active:scale-95 transition-all shadow-lg shadow-indigo-200">
+                Sign In
+            </button>
+        </form>
 
-    <input id="email" type="email" placeholder="Email"
-        class="w-full mb-3 p-2 border rounded" required>
+        <p id="msg" class="text-center text-sm mt-6"></p>
+        
+        <div class="text-center mt-8 pt-6 border-t border-slate-100">
+            <p class="text-sm text-slate-500">
+                New to Hyperlocal? <a href="register.html" class="text-indigo-600 font-semibold hover:underline">Create an account</a>
+            </p>
+        </div>
+    </div>
 
-    <input id="password" type="password" placeholder="Password"
-        class="w-full mb-3 p-2 border rounded" required>
+    <script>
+        const API_BASE = "http://localhost:8080/hyperlocaldelivery/api";
 
-    <button type="submit"
-        class="w-full bg-blue-500 text-white py-2 rounded">
-        Login
-    </button>
+        async function handleLogin(e) {
+            e.preventDefault();
+            const status = document.getElementById("msg");
+            status.innerText = "Authenticating...";
+            status.className = "text-indigo-600 mt-2 text-center text-sm font-medium";
 
-    <p id="error" class="text-red-500 text-sm mt-2"></p>
+            // Based on your LoginDTO.java
+            const payload = {
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            };
 
-</form>
+            try {
+                const response = await fetch(`${API_BASE}/public/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
 
-<script>
-function login(e) {
-    e.preventDefault();
+                const data = await response.json();
 
-    fetch("/hyperlocaldelivery/api/public/auth/login", {        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value
-        })
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("Invalid credentials");
-        return res.json();
-    })
-    .then(data => {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("role", data.role);
-        localStorage.setItem("userId", data.userId);
+                if (response.ok && data.token) {
+                    status.innerText = "Login successful! Loading your dashboard...";
+                    status.className = "text-green-600 mt-2 text-center text-sm font-medium";
 
-        window.location.href = "dashboard.html";
-    })
-    .catch(err => {
-        document.getElementById("error").innerText = err.message;
-    });
-}
-</script>
-<script src="script.js"></script>
+                    // CRITICAL: Save AuthResponseDTO data to localStorage
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("userId", data.userId);
+                    localStorage.setItem("userName", data.name);
+                    localStorage.setItem("role", data.role);
 
+                    // Role-based routing
+                    setTimeout(() => {
+                        const role = data.role;
+                        if (role === "CUSTOMER") window.location.href = "customer.html";
+                        else if (role === "DELIVERY") window.location.href = "delivery.html";
+                        else if (role === "WAREHOUSE") window.location.href = "warehouse.html";
+                        else window.location.href = "admin.html";
+                    }, 1000);
+                } else {
+                    status.innerText = data.message || "Invalid email or password.";
+                    status.className = "text-red-600 mt-2 text-center text-sm font-medium";
+                }
+            } catch (err) {
+                status.innerText = "Connection error. Ensure backend is running.";
+                status.className = "text-red-600 mt-2 text-center text-sm font-medium";
+            }
+        }
+    </script>
 </body>
 </html>

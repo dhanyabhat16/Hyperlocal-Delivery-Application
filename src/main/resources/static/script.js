@@ -1,200 +1,113 @@
-const BASE = "http://localhost:8080/api";
-const role = localStorage.getItem("role");
-const userId = localStorage.getItem("userId");
-const token = localStorage.getItem("token");
+// 1. SAFE DECLARATIONS (Prevents "Already Declared" Errors)
+if (typeof API_BASE === 'undefined') {
+    var API_BASE = "http://localhost:8080/hyperlocaldelivery/api";
+}
 
-fetch(url, {
-    headers: {
-        "Authorization": "Bearer " + token
+// Use 'var' to allow re-declaration if other files load these too
+var role = localStorage.getItem("role");
+var userId = localStorage.getItem("userId");
+var token = localStorage.getItem("token");
+
+// 2. INITIALIZATION (Runs only if element exists)
+window.addEventListener('DOMContentLoaded', () => {
+    const roleTitle = document.getElementById("roleTitle");
+    if (roleTitle && role) {
+        roleTitle.innerText = "Logged in as: " + role.toUpperCase();
     }
+
+    // ROUTING
+    if (role === "DELIVERY" || role === "delivery") loadDelivery();
+    if (role === "CUSTOMER" || role === "customer") loadCustomer();
+    if (role === "WAREHOUSE" || role === "warehouse") loadWarehouse();
+    if (role === "ADMIN" || role === "admin") loadAdmin();
 });
 
-document.getElementById("roleTitle").innerText =
-    "Logged in as: " + role.toUpperCase();
+// 3. UNIFIED REQUEST HANDLER
+async function apiRequest(endpoint, method = "GET", body = null) {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-if (role === "delivery") loadDelivery();
-if (role === "customer") loadCustomer();
-if (role === "warehouse") loadWarehouse();
-if (role === "admin") loadAdmin();
+    const options = { method, headers };
+    if (body) options.body = JSON.stringify(body);
 
-// DELIVERY
+    const response = await fetch(`${API_BASE}${endpoint}`, options);
+    
+    if (response.status === 401 || response.status === 403) {
+        localStorage.clear();
+        window.location.href = "login.html";
+        return;
+    }
+    return response.json();
+}
+
+// 4. MODULE FUNCTIONS (Using your teammates' paths)
+
 function loadDelivery() {
-    fetch(`${BASE}/delivery/my-orders?partnerId=${userId}`)
-        .then(res => res.json())
-        .then(data => renderDelivery(data));
+    // Note: Removed floating fetch(url) from here
+    fetch(`${API_BASE}/delivery/my-orders?partnerId=${userId}`, {
+        headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => res.json())
+    .then(data => renderDelivery(data.data || data)); // Handle nested DTOs
 }
 
-function renderDelivery(data) {
-    let html = "";
-
-    data.forEach(d => {
-        html += `
-        <div class="card">
-            Order #${d.orderId}<br>
-            Customer: ${d.customerName}<br>
-            Status: <span class="status ${d.status}">${d.status}</span><br>
-
-            <button onclick="update(${d.deliveryId}, 'OUT_FOR_DELIVERY')">Out</button>
-            <button onclick="update(${d.deliveryId}, 'DELIVERED')">Delivered</button>
-        </div>`;
-    });
-
-    document.getElementById("content").innerHTML = html;
-}
-
-function update(id, status) {
-    fetch(`${BASE}/delivery/update-status/${id}?status=${status}`)
-        .then(() => loadDelivery());
-}
-
-// CUSTOMER
 function loadCustomer() {
-    const userId = localStorage.getItem("userId");
+    // Matches your controller: /api/customer/orders
+    fetch(`${API_BASE}/customer/orders`, {
+        headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const container = document.getElementById("content");
+        if (!container) return;
+        const orders = data.data || data;
+        
+        if (!orders || orders.length === 0) {
+            container.innerHTML = "<p class='p-4 text-gray-500'>No orders yet</p>";
+            return;
+        }
 
-    fetch(`/hyperlocaldelivery/api/customer/orders?userId=${userId}`)
-        .then(res => res.json())
-        .then(data => {
-            const container = document.getElementById("content");
-
-            if (!data || data.length === 0) {
-                container.innerHTML = "<p>No orders yet</p>";
-                return;
-            }
-
-            container.innerHTML = data.map(o => `
-                <div style="background:#fff; padding:15px; margin:10px; border-radius:8px;">
-                    <h3>Order #${o.orderId}</h3>
-                    <p>Status: ${o.status}</p>
-                    <p>Amount: ₹${o.totalAmount}</p>
-                </div>
-            `).join("");
-        });
+        container.innerHTML = orders.map(o => `
+            <div class="bg-white p-4 m-2 rounded-xl shadow-sm border">
+                <h3 class="font-bold">Order #${o.orderId}</h3>
+                <p class="text-sm text-gray-600">Status: ${o.status}</p>
+                <p class="text-indigo-600 font-bold">₹${o.totalAmount}</p>
+            </div>
+        `).join("");
+    });
 }
 
-// WAREHOUSE
-function loadWarehouse() {
-    fetch(`${BASE}/warehouse/orders`)
-        .then(res => res.json())
-        .then(data => {
-
-            let html = "<h2 class='text-xl font-bold mb-4'>🏭 Orders to Process</h2>";
-
-            data.forEach(o => {
-                html += `
-                <div class="bg-white p-4 rounded shadow">
-                    <p><b>Order #${o.orderId}</b></p>
-                    <p>Status: ${o.status}</p>
-
-                    <button onclick="updateWarehouse(${o.orderId}, 'PACKED')"
-                        class="bg-blue-500 text-white px-3 py-1 rounded">
-                        Mark Packed
-                    </button>
-
-                    <button onclick="assignDelivery(${o.orderId})"
-                        class="bg-green-500 text-white px-3 py-1 rounded">
-                        Assign Delivery
-                    </button>
-                </div>`;
-            });
-
-            document.getElementById("content").innerHTML = html;
-        });
-}
-
-// ADMIN (placeholder)
-function loadAdmin() {
-    document.getElementById("content").innerHTML =
-        "<div class='card'>Admin panel coming soon</div>";
-}
-
-function updateWarehouse(orderId, status) {
-    fetch(`${BASE}/warehouse/update-status/${orderId}?status=${status}`)
-        .then(() => loadWarehouse());
-}
-
-function assignDelivery(orderId) {
-    const partnerId = prompt("Enter Delivery Partner ID");
-
-    fetch(`${BASE}/warehouse/assign-delivery?orderId=${orderId}&partnerId=${partnerId}`)
-        .then(() => loadWarehouse());
-}
-
-// LOGOUT
 function logout() {
     localStorage.clear();
     window.location.href = "login.html";
 }
 
-function register(e) {
-    e.preventDefault();
-
-    const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-    const role = document.getElementById("role").value;
-    const city = document.getElementById("city").value;
-
-    console.log("Sending:", name, email, password, role, city);
-
-    fetch("/hyperlocaldelivery/api/public/auth/register", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            name: name,
-            email: email,
-            password: password,
-            role: role,
-            city: city
-        })
-    })
-    .then(async res => {
-        const text = await res.text();
-        console.log("RAW RESPONSE:", text);
-
-        if (!res.ok) throw new Error(text);
-        return JSON.parse(text);
-    })
-    .then(() => {
-        document.getElementById("msg").innerText = "Registered successfully";
-    })
-    .catch(err => {
-        console.error(err);
-        document.getElementById("msg").innerText = err.message;
-    });
-}
-
-function doLogin() {
-    console.log("Login clicked");
-
+// 5. AUTH FUNCTIONS (Matches AuthController)
+function doLogin(e) {
+    if(e) e.preventDefault();
     const email = document.getElementById("login-email").value;
     const password = document.getElementById("login-password").value;
 
-    fetch("http://localhost:8080/api/public/auth/login", {
+    fetch(`${API_BASE}/public/auth/login`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            email: email,
-            password: password
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
     })
-    .then(res => {
-        console.log("Login response:", res);
-        if (!res.ok) throw new Error("Login failed");
-        return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("role", data.role);
-        localStorage.setItem("userId", data.userId);
-
-        alert("Login successful");
+        if (data.token) {
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("role", data.role);
+            localStorage.setItem("userId", data.userId);
+            localStorage.setItem("userName", data.name);
+            
+            // Navigate based on role
+            if (data.role === "CUSTOMER") window.location.href = "customer.html";
+            else if (data.role === "DELIVERY") window.location.href = "delivery.html";
+            else window.location.href = "dashboard.html"; 
+        } else {
+            alert("Login failed: " + data.message);
+        }
     })
-    .catch(err => {
-        console.error(err);
-        alert("Error: " + err.message);
-    });
+    .catch(err => alert("Error: " + err.message));
 }
