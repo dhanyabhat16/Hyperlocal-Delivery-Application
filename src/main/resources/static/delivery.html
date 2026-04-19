@@ -1,78 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Delivery Partner Dashboard</title>
-    <style>
-        body {
-            font-family: Arial;
-            margin: 40px;
-        }
-        h2 {
-            color: #333;
-        }
-        button {
-            padding: 8px 12px;
-            margin: 5px;
-            cursor: pointer;
-        }
-        .card {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Partner | Hyperlocal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white border-b border-gray-100 p-4 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-indigo-600">Hyperlocal <span class="text-gray-400 font-normal">Partner</span></h1>
+            <button onclick="logout()" class="text-gray-500 hover:text-red-500 transition">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </nav>
 
-<h2>🚚 Delivery Partner Dashboard</h2>
+    <main class="max-w-4xl mx-auto p-4 sm:p-6">
+        <div class="mb-8 flex justify-between items-end">
+            <div>
+                <h2 id="partnerName" class="text-2xl font-bold text-gray-800">Welcome!</h2>
+                <p class="text-gray-500 text-sm">Ready for your next delivery?</p>
+            </div>
+            <div class="flex space-x-2 bg-gray-200 p-1 rounded-xl">
+                <button onclick="switchTab('assigned')" id="tabAssigned" class="px-4 py-2 rounded-lg text-sm font-bold bg-white shadow-sm">My Tasks</button>
+                <button onclick="switchTab('available')" id="tabAvailable" class="px-4 py-2 rounded-lg text-sm font-bold text-gray-500">Available</button>
+            </div>
+        </div>
 
-<label>Partner ID:</label>
-<input type="number" id="partnerId" value="9">
-<button onclick="loadOrders()">Load My Orders</button>
+        <div id="taskList" class="grid grid-cols-1 gap-4">
+            <div class="p-10 text-center text-gray-400">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                <p>Fetching tasks...</p>
+            </div>
+        </div>
+    </main>
 
-<div id="orders"></div>
-
-<script>
-const BASE_URL = "http://localhost:8080/hyperlocaldelivery/api/delivery";
-
-function loadOrders() {
-    const partnerId = document.getElementById("partnerId").value;
-
-    fetch(`${BASE_URL}/my-orders?partnerId=${partnerId}`)
-        .then(res => res.json())
-        .then(data => {
-            const container = document.getElementById("orders");
-            container.innerHTML = "";
-
-            data.forEach(d => {
-                const div = document.createElement("div");
-                div.className = "card";
-
-                div.innerHTML = `
-                    <b>Delivery ID:</b> ${d.deliveryId}<br>
-                    <b>Order ID:</b> ${d.orderId}<br>
-                    <b>Status:</b> ${d.status}<br>
-                    <button onclick="acceptOrder(${d.deliveryId})">Accept</button>
-                    <button onclick="updateStatus(${d.deliveryId}, 'OUT_FOR_DELIVERY')">Out for Delivery</button>
-                    <button onclick="updateStatus(${d.deliveryId}, 'DELIVERED')">Delivered</button>
-                `;
-
-                container.appendChild(div);
-            });
-        });
-}
-
-function acceptOrder(id) {
-    fetch(`${BASE_URL}/accept/${id}`)
-        .then(() => loadOrders());
-}
-
-function updateStatus(id, status) {
-    fetch(`${BASE_URL}/update-status/${id}?status=${status}`)
-        .then(() => loadOrders());
-}
-</script>
-
+    <script src="script.js"></script>
+    <script src="delivery.js"></script>
 </body>
 </html>

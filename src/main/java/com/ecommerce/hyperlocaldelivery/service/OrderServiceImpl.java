@@ -23,6 +23,7 @@ public class OrderServiceImpl implements IOrderService {
     private final OrderItemRepository orderItemRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
+    private final DeliveryRepository deliveryRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
@@ -106,8 +107,15 @@ public class OrderServiceImpl implements IOrderService {
         Order finalOrder = orderRepository.save(order);
         
         // Clear cart items after successful order placement
+        // ... line 105 in OrderServiceImpl.java
         cartItemRepository.deleteByCartCartId(cart.getCartId());
-        
+
+        // Create a new delivery task automatically for the partner to see
+        Delivery deliveryTask = new Delivery();
+        deliveryTask.setOrder(finalOrder); // Link it to the order just created
+        deliveryTask.setStatus(OrderStatus.PENDING); // Set initial status
+        deliveryRepository.save(deliveryTask); // Save to delivery table
+
         return convertToDTO(finalOrder);
     }
     

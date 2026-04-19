@@ -24,11 +24,14 @@ public class DeliveryServiceImpl implements IDeliveryService {
 
         return deliveries.stream().map(d ->
         new DeliveryDTO(
-                d.getDeliveryId(),
-                d.getOrder().getOrderId(),
-                d.getStatus().name(),
-                d.getOrder().getUser().getName()
-        )
+        d.getDeliveryId(),
+        d.getOrder().getOrderId(),
+        d.getStatus().name(),
+        d.getOrder().getUser().getName(),
+        d.getOrder().getUser().getCity(), // Or specific address field
+        d.getOrder().getItems().stream().map(item -> item.getProduct().getName()).toList(),
+        d.getOrder().getTotalAmount()
+    )
 ).toList();
     }
 
