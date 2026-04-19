@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/warehouse/**").hasAnyRole("WAREHOUSE", "ADMIN")
                 .requestMatchers("/api/customers/register", "/api/customers/login").permitAll()
                 .requestMatchers("/api/customer/cart/**").permitAll() // TEMPORARY: Allow everyone to test
-                .requestMatchers("/", "/index.html", "/login.html", "/register.html", "/customer.html","/static/**").permitAll()
+                .requestMatchers("/", "/index.html", "/login.html", "/register.html", "/customer.html", "/warehouse.html", "/static/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/delivery/**").permitAll()
                 .requestMatchers(

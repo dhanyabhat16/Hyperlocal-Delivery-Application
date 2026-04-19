@@ -68,11 +68,12 @@
             document.getElementById("cartStatus").classList.remove("hidden");
             document.getElementById("viewTitle").innerText = "Browse Products";
             
-            const response = await fetch(`${API_BASE}/products`);
+            const response = await fetch(`${API_BASE}/public/products`);
             const data = await response.json();
+            const products = data?.data || [];
             
             let html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-6">`;
-            data.data.forEach(p => {
+            products.forEach(p => {
                 html += `
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
                     <div class="h-32 bg-gray-100 rounded-lg mb-4 flex items-center justify-center text-gray-400 italic">Product Image</div>

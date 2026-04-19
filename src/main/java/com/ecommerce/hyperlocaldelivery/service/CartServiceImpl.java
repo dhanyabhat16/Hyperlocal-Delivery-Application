@@ -19,8 +19,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ecommerce.hyperlocaldelivery.service.ProductService;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -120,7 +118,7 @@ public class CartServiceImpl implements ICartService {
         
         Cart cart = cartItem.getCart();
         cartItemRepository.delete(cartItem);
-        
+
         cart = cartRepository.findById(cart.getCartId()).orElseThrow();
         return convertToDTO(cart);
     }
@@ -181,8 +179,8 @@ public class CartServiceImpl implements ICartService {
         
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found for user: " + userId));
-        
-        cartItemRepository.deleteAll(cart.getItems());
+
+        cartItemRepository.deleteByCartCartId(cart.getCartId());
         return "Cart cleared successfully";
     }
     
@@ -190,7 +188,8 @@ public class CartServiceImpl implements ICartService {
      * Helper method to convert Cart entity to DTO
      */
     private CartDTO convertToDTO(Cart cart) {
-        List<CartItemDTO> itemDTOs = cart.getItems().stream()
+        List<CartItem> cartItems = cartItemRepository.findByCartCartId(cart.getCartId());
+        List<CartItemDTO> itemDTOs = cartItems.stream()
                 .map(item -> CartItemDTO.builder()
                         .cartItemId(item.getCartItemId())
                         .product(modelMapper.map(item.getProduct(), com.ecommerce.hyperlocaldelivery.dto.ProductDTO.class))
@@ -198,11 +197,15 @@ public class CartServiceImpl implements ICartService {
                         .price(item.getPrice())
                         .build())
                 .collect(Collectors.toList());
+
+        double total = cartItems.stream()
+            .mapToDouble(item -> item.getPrice() * item.getQuantity())
+            .sum();
         
         return CartDTO.builder()
                 .cartId(cart.getCartId())
                 .items(itemDTOs)
-                .totalAmount(cart.getTotal())
+            .totalAmount(total)
                 .build();
     }
 }

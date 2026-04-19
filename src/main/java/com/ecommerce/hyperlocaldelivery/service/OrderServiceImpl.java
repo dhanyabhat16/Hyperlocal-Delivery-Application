@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,6 +65,7 @@ public class OrderServiceImpl implements IOrderService {
         
         // Create order items and reduce stock
         Double totalAmount = 0.0;
+        List<OrderItem> createdItems = new ArrayList<>();
         for (CartItem cartItem : cart.getItems()) {
             Product product = cartItem.getProduct();
             
@@ -88,7 +90,8 @@ public class OrderServiceImpl implements IOrderService {
             orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setPrice(cartItem.getPrice());
             
-            orderItemRepository.save(orderItem);
+            OrderItem savedOrderItem = orderItemRepository.save(orderItem);
+            createdItems.add(savedOrderItem);
             
             // Reduce product quantity
             product.setQuantity(product.getQuantity() - cartItem.getQuantity());
@@ -99,10 +102,11 @@ public class OrderServiceImpl implements IOrderService {
         
         // Update order total amount
         order.setTotalAmount(totalAmount);
+        order.setItems(createdItems);
         Order finalOrder = orderRepository.save(order);
         
-        // Clear cart
-        cartItemRepository.deleteAll(cart.getItems());
+        // Clear cart items after successful order placement
+        cartItemRepository.deleteByCartCartId(cart.getCartId());
         
         return convertToDTO(finalOrder);
     }
@@ -296,7 +300,8 @@ public class OrderServiceImpl implements IOrderService {
      * Helper method to convert Order entity to DTO
      */
     private OrderDTO convertToDTO(Order order) {
-        List<OrderItemDTO> itemDTOs = order.getItems().stream()
+        List<OrderItem> orderItems = order.getItems() == null ? List.of() : order.getItems();
+        List<OrderItemDTO> itemDTOs = orderItems.stream()
                 .map(item -> OrderItemDTO.builder()
                         .orderItemId(item.getOrderItemId())
                         .product(modelMapper.map(item.getProduct(), com.ecommerce.hyperlocaldelivery.dto.ProductDTO.class))
