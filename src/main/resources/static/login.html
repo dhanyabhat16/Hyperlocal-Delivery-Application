@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Hyperlocal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+        const { useState } = React;
+        const API_BASE = "http://localhost:8080/hyperlocaldelivery/api";
+
+        function LoginApp() {
+            const [email, setEmail] = useState("");
+            const [password, setPassword] = useState("");
+            const [status, setStatus] = useState("");
+            const [busy, setBusy] = useState(false);
+
+            async function handleLogin(event) {
+                event.preventDefault();
+                setBusy(true);
+                setStatus("Authenticating...");
+
+                try {
+                    const response = await fetch(`${API_BASE}/public/auth/login`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.token) {
+                        throw new Error(data.message || "Invalid email or password");
+                    }
+
+                    const normalizedRole = data.role === "WAREHOUSE_MANAGER" ? "WAREHOUSE" : data.role;
+
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("userId", String(data.userId));
+                    localStorage.setItem("userName", data.name || "User");
+                    localStorage.setItem("role", normalizedRole);
+
+                    setStatus("Login successful. Redirecting...");
+
+                    if (normalizedRole === "WAREHOUSE") window.location.href = "warehouse.html";
+                    else if (normalizedRole === "CUSTOMER") window.location.href = "customer.html";
+                    else if (normalizedRole === "DELIVERY") window.location.href = "delivery.html";
+                    else window.location.href = "dashboard.html";
+                } catch (error) {
+                    setStatus(error.message || "Connection error. Please try again.");
+                } finally {
+                    setBusy(false);
+                }
+            }
+
+            const statusClass = status.toLowerCase().includes("successful")
+                ? "text-green-600"
+                : status.toLowerCase().includes("authenticating")
+                ? "text-indigo-600"
+                : "text-red-600";
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-bold text-slate-900">Welcome Back</h2>
+                            <p className="text-slate-500 mt-2">Sign in to continue</p>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Email Address</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Password</label>
+                                <input
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={busy}
+                                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-60"
+                            >
+                                {busy ? "Signing In..." : "Sign In"}
+                            </button>
+                        </form>
+
+                        {status && <p className={`text-center text-sm mt-6 ${statusClass}`}>{status}</p>}
+
+                        <div className="text-center mt-8 pt-6 border-t border-slate-100">
+                            <p className="text-sm text-slate-500">
+                                New to Hyperlocal? <a href="register.html" className="text-indigo-600 font-semibold hover:underline">Create an account</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<LoginApp />);
+    </script>
+</body>
+</html>

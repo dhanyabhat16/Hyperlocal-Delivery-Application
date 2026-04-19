@@ -35,7 +35,10 @@ public class CartController {
                 .success(true)
                 .build());
     }
-    
+    @GetMapping("/debug")
+        public ResponseEntity<String> debugCart() {
+        return ResponseEntity.ok("The Cart Controller is ALIVE!");
+        }
     /**
      * Add item to cart
      */

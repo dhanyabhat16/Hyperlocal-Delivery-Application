@@ -10,6 +10,10 @@ public interface IOrderService {
      * Place order from cart
      */
     OrderDTO placeOrder(Integer userId);
+    /**
+ * Get unassigned (available) orders for delivery partners
+ */
+    List<OrderDTO> getAvailableOrders();
     
     /**
      * Get user's orders

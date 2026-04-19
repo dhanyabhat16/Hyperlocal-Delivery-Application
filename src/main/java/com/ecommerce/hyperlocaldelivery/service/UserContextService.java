@@ -28,9 +28,27 @@ public class UserContextService {
         User user = getCurrentUser();
         if (user != null) {
             if (user.getRole() == com.ecommerce.hyperlocaldelivery.entity.Role.WAREHOUSE) {
-                return user.getWarehouse();
+                if (user.getWarehouse() != null) {
+                    return user.getWarehouse();
+                }
+                if (user.getCity() == null || user.getCity().isBlank()) {
+                    return null;
+                }
+                try {
+                    return warehouseService.getWarehouseByCity(user.getCity());
+                } catch (RuntimeException ex) {
+                    return null;
+                }
             } else if (user.getRole() == com.ecommerce.hyperlocaldelivery.entity.Role.CUSTOMER) {
-                return warehouseService.getWarehouseByCity(user.getCity());
+                if (user.getCity() == null || user.getCity().isBlank()) {
+                    return null;
+                }
+                try {
+                    return warehouseService.getWarehouseByCity(user.getCity());
+                } catch (RuntimeException ex) {
+                    // For customer-facing public product APIs, missing warehouse mapping should not fail the request.
+                    return null;
+                }
             }
         }
         return null;

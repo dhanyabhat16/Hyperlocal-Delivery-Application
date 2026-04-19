@@ -38,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
         user.setName(registerDTO.getName());
         user.setEmail(registerDTO.getEmail());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
-        user.setRole(Role.CUSTOMER);
+        user.setRole(Role.valueOf(registerDTO.getRole().toUpperCase()));
         user.setCity(registerDTO.getCity()); // Store city for customers
 
         User savedUser = userRepository.save(user);

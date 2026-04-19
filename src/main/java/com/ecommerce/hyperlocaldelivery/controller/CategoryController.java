@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 //but u could also do a field inject using the @Autowired so you would not need constructor
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class CategoryController {
     private final CategoryService categoryService;
