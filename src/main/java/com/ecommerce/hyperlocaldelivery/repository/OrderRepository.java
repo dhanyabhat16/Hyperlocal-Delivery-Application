@@ -19,6 +19,6 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     List<Order> findByWarehouseOrderByCreatedAtDesc(Warehouse warehouse);
     List<Order> findByWarehouseAndCreatedAtAfter(Warehouse warehouse, java.time.LocalDateTime createdAt);
 
-    @Query("SELECT o FROM Order o WHERE o.orderId NOT IN (SELECT d.order.orderId FROM Delivery d)")
+    @Query("SELECT o FROM Order o WHERE o.status = 'PENDING'")
     List<Order> findUnassignedOrders();
 }

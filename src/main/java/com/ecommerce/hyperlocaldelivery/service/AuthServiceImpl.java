@@ -48,10 +48,16 @@ public class AuthServiceImpl implements AuthService {
         return mapToDTO(savedUser, token);
     }
 
+    
     @Override
     public AuthResponseDTO login(LoginDTO loginDTO) {
+        // Trim the email to remove accidental leading/trailing spaces
+        String cleanedEmail = loginDTO.getEmail().trim();
+        
+        // Add a temporary console log to see EXACTLY what Hibernate is searching for
+        System.out.println("Login attempt for email: [" + cleanedEmail + "]");
 
-        User user = userRepository.findByEmail(loginDTO.getEmail())
+        User user = userRepository.findByEmail(cleanedEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if(!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {

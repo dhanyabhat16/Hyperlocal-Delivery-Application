@@ -45,9 +45,8 @@ public class DeliveryController {
         );
     }
     @GetMapping("/available")
-    public ResponseEntity<?> getAvailableOrders() {
-    return ResponseEntity.ok(
-            orderService.getAvailableOrders()
-    );
+public ResponseEntity<?> getAvailableOrders() {
+    return ResponseEntity.ok(orderService.getAvailableOrders());
+
 }
 }
