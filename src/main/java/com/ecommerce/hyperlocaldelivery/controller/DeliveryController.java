@@ -28,11 +28,12 @@ public class DeliveryController {
 
     // Accept delivery
     @GetMapping("/accept/{orderId}")
-    public ResponseEntity<?> acceptOrder(@PathVariable Integer orderId) {
-    return ResponseEntity.ok(
-            deliveryService.acceptOrder(orderId)
-    );
+    public ResponseEntity<?> acceptOrder(
+        @PathVariable Integer orderId,
+        @RequestParam Integer partnerId) {
 
+    deliveryService.acceptOrder(orderId, partnerId);
+    return ResponseEntity.ok("Accepted");
 }
 
     // Update delivery status
@@ -46,7 +47,7 @@ public class DeliveryController {
         );
     }
     @GetMapping("/available")
-public ResponseEntity<?> getAvailableOrders() {
+    public ResponseEntity<?> getAvailableOrders() {
     return ResponseEntity.ok(orderService.getAvailableOrders());
 
 }

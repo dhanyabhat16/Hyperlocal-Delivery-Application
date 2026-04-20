@@ -27,13 +27,16 @@ async function loadMyTasks() {
         const response = await fetch(`${API_DELIVERY}/my-orders?partnerId=${dPartnerId}`, {
             headers: { "Authorization": `Bearer ${dToken}` }
         });
+
         const result = await response.json();
-        
-        // Handle both Wrapped DTOs {data: [...]} and Raw Arrays [...]
-        const tasks = result.data ? result.data : result; 
-        console.log("My Tasks received:", tasks); // Check this in F12 console!
+        const tasks = result.data ? result.data : result;
+
+        console.log("My Tasks received:", tasks);
         renderTasks(tasks, false);
-    } catch (err) { console.error(err); }
+
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 // 4. Load Available Tasks
@@ -147,7 +150,7 @@ var renderDelivery = renderTasks;
 // 6. Action Functions
 async function acceptOrder(id) {
     try {
-        await fetch(`${API_DELIVERY}/accept/${id}`, {
+        await fetch(`${API_DELIVERY}/accept/${id}?partnerId=${dPartnerId}`, {
             headers: { "Authorization": `Bearer ${dToken}` }
         });
         switchTab('assigned');

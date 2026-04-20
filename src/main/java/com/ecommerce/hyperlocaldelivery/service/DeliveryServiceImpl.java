@@ -44,23 +44,22 @@ public class DeliveryServiceImpl implements IDeliveryService {
 }).toList();}
 
     @Override
-    
-    public Delivery acceptOrder(Integer orderId) {
+    public Delivery acceptOrder(Integer orderId, Integer partnerId) {
 
-        Delivery delivery = deliveryRepository
-                .findAll()
-                .stream()
-                .filter(d -> d.getOrder().getOrderId().equals(orderId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Delivery not found"));
+    Delivery delivery = deliveryRepository.findAll()
+            .stream()
+            .filter(d -> d.getOrder().getOrderId().equals(orderId))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Delivery not found"));
 
-        User partner = userRepository.findById(16).orElse(null);
+    User partner = userRepository.findById(partnerId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
-        delivery.setDeliveryPartner(partner);
-        delivery.setStatus(OrderStatus.ASSIGNED);
+    delivery.setDeliveryPartner(partner);
+    delivery.setStatus(OrderStatus.ASSIGNED);
 
-        return deliveryRepository.save(delivery);
-    }
+    return deliveryRepository.save(delivery);
+}
 
     
     

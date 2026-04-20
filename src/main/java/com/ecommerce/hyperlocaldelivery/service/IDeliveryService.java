@@ -10,7 +10,7 @@ public interface IDeliveryService {
 
     List<DeliveryDTO> getAssignedOrders(Integer partnerId);
 
-    Delivery acceptOrder(Integer deliveryId);
+    Delivery acceptOrder(Integer orderId, Integer partnerId);
 
     Delivery updateStatus(Integer deliveryId, OrderStatus status);
 }
