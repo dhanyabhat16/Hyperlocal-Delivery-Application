@@ -23,20 +23,6 @@ function switchTab(tab) {
 
 // 3. Load Assigned Tasks (My Tasks)
 async function loadMyTasks() {
-    const list = document.getElementById("taskList");
-    try {
-        const response = await fetch(`${API_DELIVERY}/my-orders?partnerId=${dPartnerId}`, {
-            headers: { "Authorization": `Bearer ${dToken}` }
-        });
-        const data = await response.json();
-        renderTasks(data, false); // false = not the available tab
-    } catch (err) {
-        console.error("Failed to load assigned tasks", err);
-    }
-}
-
-// 4. Load Available Tasks
-async function loadMyTasks() {
     try {
         const response = await fetch(`${API_DELIVERY}/my-orders?partnerId=${dPartnerId}`, {
             headers: { "Authorization": `Bearer ${dToken}` }
@@ -50,6 +36,7 @@ async function loadMyTasks() {
     } catch (err) { console.error(err); }
 }
 
+// 4. Load Available Tasks
 async function loadAvailableTasks() {
     try {
         const response = await fetch(`${API_DELIVERY}/available`, {
@@ -100,7 +87,11 @@ function renderTasks(tasks, isAvailableTab) {
         }
 
         const totalPrice = t.totalAmount || t.total_amount || "0.00";
-        const displayAddress = t.address || "Standard Delivery";
+        const displayAddress =
+            t.address ||
+            t.user?.defaultAddress?.street ||
+            t.user?.city ||
+            "Standard Delivery";
 
         // --- HTML TEMPLATE SECTION ---
         return `
@@ -134,7 +125,7 @@ function renderTasks(tasks, isAvailableTab) {
 function getActionButtons(t) {
     if (currentTab === 'available') {
         // Available tab uses the ID from the available pool
-        const id = t.deliveryId || t.orderId;
+        const id = t.orderId;
         return `<button onclick="acceptOrder(${id})" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-indigo-700">Accept Order</button>`;
     }
     

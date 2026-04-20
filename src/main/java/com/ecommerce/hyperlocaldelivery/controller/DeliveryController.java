@@ -27,12 +27,13 @@ public class DeliveryController {
     }
 
     // Accept delivery
-    @GetMapping("/accept/{deliveryId}")
-    public ResponseEntity<?> acceptOrder(@PathVariable Integer deliveryId) {
-        return ResponseEntity.ok(
-                deliveryService.acceptOrder(deliveryId)
-        );
-    }
+    @GetMapping("/accept/{orderId}")
+    public ResponseEntity<?> acceptOrder(@PathVariable Integer orderId) {
+    return ResponseEntity.ok(
+            deliveryService.acceptOrder(orderId)
+    );
+
+}
 
     // Update delivery status
     @GetMapping("/update-status/{deliveryId}")

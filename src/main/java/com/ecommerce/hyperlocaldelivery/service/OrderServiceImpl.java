@@ -246,7 +246,18 @@ public class OrderServiceImpl implements IOrderService {
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
-}
+    }
+    @Override
+    public List<OrderDTO> getAvailableOrdersForCity(String city) {
+    // 1. Fetch only orders from the partner's specific city
+    List<Order> orders = orderRepository.findAvailableOrdersByCity(city);
+    
+    // 2. Map them to DTOs for the UI
+    return orders.stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+    
     @Override
     public String getOrderStatus(Integer orderId, Integer userId) {
         User user = userRepository.findById(userId)

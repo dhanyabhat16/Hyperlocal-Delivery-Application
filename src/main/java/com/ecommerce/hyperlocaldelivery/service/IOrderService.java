@@ -66,4 +66,6 @@ public interface IOrderService {
      */
     String getOrderStatus(Integer orderId, Integer userId);
 
+    /**Get available orders filtered by city */
+    List<OrderDTO> getAvailableOrdersForCity(String city);
 }

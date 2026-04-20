@@ -12,7 +12,7 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Integer> {
 
     // Get deliveries assigned to a delivery partner
     List<Delivery> findByDeliveryPartner_UserId(Integer userId);
-
+    Delivery findByOrder_OrderId(Integer orderId);
     // Optional: Get deliveries by status
     List<Delivery> findByStatus(OrderStatus status);
 }

@@ -4,6 +4,8 @@ import com.ecommerce.hyperlocaldelivery.entity.Delivery;
 import com.ecommerce.hyperlocaldelivery.entity.OrderStatus;
 import com.ecommerce.hyperlocaldelivery.repository.DeliveryRepository;
 import com.ecommerce.hyperlocaldelivery.repository.OrderRepository;
+import com.ecommerce.hyperlocaldelivery.repository.UserRepository;
+import com.ecommerce.hyperlocaldelivery.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ecommerce.hyperlocaldelivery.dto.DeliveryDTO;
@@ -14,6 +16,9 @@ public class DeliveryServiceImpl implements IDeliveryService {
 
     @Autowired
     private DeliveryRepository deliveryRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private OrderRepository orderRepository;
@@ -39,15 +44,26 @@ public class DeliveryServiceImpl implements IDeliveryService {
 }).toList();}
 
     @Override
-    public Delivery acceptOrder(Integer deliveryId) {
+    
+    public Delivery acceptOrder(Integer orderId) {
 
-        Delivery delivery = deliveryRepository.findById(deliveryId)
+        Delivery delivery = deliveryRepository
+                .findAll()
+                .stream()
+                .filter(d -> d.getOrder().getOrderId().equals(orderId))
+                .findFirst()
                 .orElseThrow(() -> new RuntimeException("Delivery not found"));
 
+        User partner = userRepository.findById(16).orElse(null);
+
+        delivery.setDeliveryPartner(partner);
         delivery.setStatus(OrderStatus.ASSIGNED);
 
         return deliveryRepository.save(delivery);
     }
+
+    
+    
 
     @Override
     public Delivery updateStatus(Integer deliveryId, OrderStatus status) {
