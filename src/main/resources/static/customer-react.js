@@ -6,6 +6,7 @@ function parseApiResponse(json) {
   if (json && typeof json === "object" && "data" in json) {
     return json.data;
   }
+
   return json;
 }
 
@@ -45,13 +46,27 @@ function currency(value) {
   return `Rs ${amount.toFixed(2)}`;
 }
 
+function isCancelledOrFinal(order) {
+  const status = String(order?.status || "").toUpperCase();
+  return ["CANCELLED", "DELIVERED", "COMPLETED"].includes(status);
+}
+
+function canProcessPayment(order) {
+  const status = String(order?.status || "").toUpperCase();
+  return !["CANCELLED", "PAID", "DELIVERED", "COMPLETED"].includes(status);
+}
+
 function CustomerApp() {
   const [view, setView] = useState("products");
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [paymentLookupOrderId, setPaymentLookupOrderId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingPayment, setLoadingPayment] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -72,6 +87,20 @@ function CustomerApp() {
     initializeData();
   }, []);
 
+  async function fetchCart() {
+    try {
+      const cartData = await apiRequest("/customer/cart");
+      return cartData || { items: [], totalAmount: 0 };
+    } catch (cartErr) {
+      return { items: [], totalAmount: 0 };
+    }
+  }
+
+  async function fetchOrders() {
+    const orderData = await apiRequest("/customer/orders");
+    return Array.isArray(orderData) ? orderData : [];
+  }
+
   async function initializeData() {
     setLoading(true);
     setError("");
@@ -80,13 +109,8 @@ function CustomerApp() {
       const productData = await apiRequest("/public/products");
       setProducts(Array.isArray(productData) ? productData : []);
 
-      try {
-        const cartData = await apiRequest("/customer/cart");
-        setCart(cartData || { items: [], totalAmount: 0 });
-      } catch (cartErr) {
-        setCart({ items: [], totalAmount: 0 });
-        setNotice("Cart will be created automatically when you add your first item.");
-      }
+      const cartData = await fetchCart();
+      setCart(cartData);
     } catch (err) {
       setError(err.message || "Failed to load customer data");
     } finally {
@@ -94,12 +118,21 @@ function CustomerApp() {
     }
   }
 
+  async function refreshOrders() {
+    const updatedOrders = await fetchOrders();
+    setOrders(updatedOrders);
+    return updatedOrders;
+  }
+
   async function loadOrders() {
     setLoading(true);
     setError("");
+    setNotice("");
     try {
-      const orderData = await apiRequest("/customer/orders");
-      setOrders(Array.isArray(orderData) ? orderData : []);
+      const updatedOrders = await refreshOrders();
+      if (updatedOrders.length > 0 && !paymentLookupOrderId) {
+        setPaymentLookupOrderId(String(updatedOrders[0].orderId || ""));
+      }
       setView("orders");
     } catch (err) {
       setError(err.message || "Failed to load orders");
@@ -113,8 +146,8 @@ function CustomerApp() {
     setError("");
     setNotice("");
     try {
-      const cartData = await apiRequest("/customer/cart");
-      setCart(cartData || { items: [], totalAmount: 0 });
+      const cartData = await fetchCart();
+      setCart(cartData);
       setView("cart");
     } catch (err) {
       setCart({ items: [], totalAmount: 0 });
@@ -122,6 +155,20 @@ function CustomerApp() {
       setNotice("Your cart is empty. Add products to create a cart.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadPayments() {
+    setError("");
+    setNotice("");
+    setView("payments");
+
+    if (!paymentLookupOrderId && orders.length > 0) {
+      setPaymentLookupOrderId(String(orders[0].orderId || ""));
+    }
+
+    if (paymentLookupOrderId) {
+      await loadPaymentByOrderId(paymentLookupOrderId, true);
     }
   }
 
@@ -200,25 +247,120 @@ function CustomerApp() {
     setNotice("");
 
     try {
-      await apiRequest("/customer/orders/place", { method: "POST" });
-      setNotice("Order placed successfully");
-      let updatedCart = { items: [], totalAmount: 0 };
-      try {
-        const cartResponse = await apiRequest("/customer/cart");
-        updatedCart = cartResponse || { items: [], totalAmount: 0 };
-      } catch (cartErr) {
-        updatedCart = { items: [], totalAmount: 0 };
-      }
-
-      const updatedOrders = await apiRequest("/customer/orders");
+      const placedOrder = await apiRequest("/customer/orders/place", { method: "POST" });
+      const updatedCart = await fetchCart();
+      const updatedOrders = await refreshOrders();
 
       setCart(updatedCart);
-      setOrders(Array.isArray(updatedOrders) ? updatedOrders : []);
+      setOrders(updatedOrders);
       setView("orders");
+      setPaymentLookupOrderId(String(placedOrder?.orderId || updatedOrders[0]?.orderId || ""));
+      setPaymentDetails(null);
+      setNotice(
+        placedOrder?.orderId
+          ? `Order #${placedOrder.orderId} placed successfully. You can pay for it from the Orders tab.`
+          : "Order placed successfully"
+      );
     } catch (err) {
       setError(err.message || "Failed to place order");
     } finally {
       setPlacingOrder(false);
+    }
+  }
+
+  async function loadPaymentByOrderId(orderId, silent = false) {
+    const parsedOrderId = Number(orderId);
+    if (!Number.isFinite(parsedOrderId) || parsedOrderId <= 0) {
+      setError("Enter a valid order ID");
+      return;
+    }
+
+    setLoadingPayment(true);
+    if (!silent) {
+      setError("");
+      setNotice("");
+    }
+
+    try {
+      const paymentData = await apiRequest(`/customer/payment/order/${parsedOrderId}`);
+      setPaymentDetails(paymentData || null);
+      setPaymentLookupOrderId(String(parsedOrderId));
+    } catch (err) {
+      setPaymentDetails(null);
+      setError(err.message || "Failed to load payment details");
+    } finally {
+      setLoadingPayment(false);
+    }
+  }
+
+  async function processPayment(order) {
+    const parsedOrderId = Number(order?.orderId);
+    const amount = Number(order?.totalAmount || 0);
+
+    if (!Number.isFinite(parsedOrderId) || parsedOrderId <= 0) {
+      setError("Invalid order selected for payment");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      setError("Order amount is invalid");
+      return;
+    }
+
+    const ok = window.confirm(`Pay ${currency(amount)} for Order #${parsedOrderId}?`);
+    if (!ok) return;
+
+    setProcessingPayment(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const paymentData = await apiRequest("/customer/payment/process", {
+        method: "POST",
+        body: JSON.stringify({
+          orderId: parsedOrderId,
+          amount,
+        }),
+      });
+
+      setPaymentDetails(paymentData);
+      setPaymentLookupOrderId(String(paymentData?.orderId || parsedOrderId));
+      await refreshOrders();
+      setView("payments");
+      setNotice(`Payment processed successfully for Order #${parsedOrderId}`);
+    } catch (err) {
+      setError(err.message || "Failed to process payment");
+    } finally {
+      setProcessingPayment(false);
+    }
+  }
+
+  async function cancelOrder(orderId) {
+    const parsedOrderId = Number(orderId);
+    if (!Number.isFinite(parsedOrderId) || parsedOrderId <= 0) {
+      setError("Invalid order selected for cancellation");
+      return;
+    }
+
+    const ok = window.confirm(`Cancel Order #${parsedOrderId}?`);
+    if (!ok) return;
+
+    setError("");
+    setNotice("");
+
+    try {
+      await apiRequest(`/customer/orders/cancel/${parsedOrderId}`, {
+        method: "PUT",
+      });
+
+      await refreshOrders();
+      setNotice(`Order #${parsedOrderId} cancelled successfully`);
+
+      if (paymentDetails?.orderId === parsedOrderId) {
+        setPaymentDetails(null);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to cancel order");
     }
   }
 
@@ -233,7 +375,13 @@ function CustomerApp() {
   }, [cart]);
 
   const activeTitle =
-    view === "products" ? "Browse Products" : view === "cart" ? "My Cart" : "My Orders";
+    view === "products"
+      ? "Browse Products"
+      : view === "cart"
+        ? "My Cart"
+        : view === "orders"
+          ? "My Orders"
+          : "Payments";
 
   return (
     <div className="min-h-screen flex">
@@ -245,7 +393,9 @@ function CustomerApp() {
           <button
             onClick={() => setView("products")}
             className={`w-full text-left p-3 rounded-xl transition ${
-              view === "products" ? "bg-indigo-50 text-indigo-700" : "hover:bg-gray-50 text-gray-600"
+              view === "products"
+                ? "bg-indigo-50 text-indigo-700"
+                : "hover:bg-gray-50 text-gray-600"
             }`}
           >
             <i className="fa-solid fa-store mr-2"></i> Products
@@ -261,10 +411,22 @@ function CustomerApp() {
           <button
             onClick={loadOrders}
             className={`w-full text-left p-3 rounded-xl transition ${
-              view === "orders" ? "bg-indigo-50 text-indigo-700" : "hover:bg-gray-50 text-gray-600"
+              view === "orders"
+                ? "bg-indigo-50 text-indigo-700"
+                : "hover:bg-gray-50 text-gray-600"
             }`}
           >
             <i className="fa-solid fa-box mr-2"></i> My Orders
+          </button>
+          <button
+            onClick={loadPayments}
+            className={`w-full text-left p-3 rounded-xl transition ${
+              view === "payments"
+                ? "bg-indigo-50 text-indigo-700"
+                : "hover:bg-gray-50 text-gray-600"
+            }`}
+          >
+            <i className="fa-solid fa-credit-card mr-2"></i> Payments
           </button>
         </nav>
         <div className="p-4 border-t">
@@ -341,7 +503,10 @@ function CustomerApp() {
               </div>
               <div className="p-5 space-y-4">
                 {(cart?.items || []).map((item) => (
-                  <div key={item.cartItemId} className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div
+                    key={item.cartItemId}
+                    className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                  >
                     <div>
                       <div className="font-medium text-gray-800">{item.product?.name}</div>
                       <div className="text-sm text-gray-500">Price: {currency(item.price)}</div>
@@ -384,25 +549,125 @@ function CustomerApp() {
 
           {view === "orders" && (
             <div className="space-y-4">
-              {(orders || []).map((order) => (
-                <div key={order.orderId} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
-                  <div className="flex flex-wrap justify-between gap-3 mb-3">
-                    <div className="font-semibold text-gray-800">Order #{order.orderId}</div>
-                    <div className="text-sm px-2 py-1 rounded bg-gray-100 text-gray-700">{order.status}</div>
-                  </div>
-                  <div className="text-sm text-gray-600 mb-2">Amount: {currency(order.totalAmount)}</div>
-                  <div className="text-xs text-gray-500">
-                    Placed: {order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}
-                  </div>
-                  <div className="mt-3 space-y-1 text-sm text-gray-700">
-                    {(order.items || []).map((item, idx) => (
-                      <div key={`${order.orderId}-${idx}`}>• {item.productName} x {item.quantity}</div>
-                    ))}
-                  </div>
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="font-semibold text-gray-800">Order actions</div>
+                  <div className="text-sm text-gray-500">Pay for an order, cancel it, or inspect its payment record.</div>
                 </div>
-              ))}
+                <button
+                  onClick={loadPayments}
+                  className="px-4 py-2 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-sm"
+                >
+                  Open Payments
+                </button>
+              </div>
+
+              {(orders || []).map((order) => {
+                const orderStatus = String(order.status || "").toUpperCase();
+                const paymentStatus = String(order.paymentStatus || order.payment?.status || "");
+
+                return (
+                  <div key={order.orderId} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+                    <div className="flex flex-wrap justify-between gap-3 mb-3">
+                      <div>
+                        <div className="font-semibold text-gray-800">Order #{order.orderId}</div>
+                        <div className="text-xs text-gray-500 mt-1">Placed: {order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}</div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center justify-end">
+                        <div className="text-sm px-2 py-1 rounded bg-gray-100 text-gray-700">{order.status}</div>
+                        {paymentStatus && (
+                          <div className="text-sm px-2 py-1 rounded bg-green-50 text-green-700">{paymentStatus}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-gray-600 mb-2">Amount: {currency(order.totalAmount)}</div>
+
+                    <div className="mt-3 space-y-1 text-sm text-gray-700">
+                      {(order.items || []).map((item, idx) => (
+                        <div key={`${order.orderId}-${idx}`}>
+                          • {item.productName} x {item.quantity}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => processPayment(order)}
+                        disabled={processingPayment || !canProcessPayment(order)}
+                        className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        {processingPayment ? "Processing..." : "Pay Now"}
+                      </button>
+                      <button
+                        onClick={() => loadPaymentByOrderId(order.orderId)}
+                        className="px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 text-sm hover:bg-indigo-50"
+                      >
+                        View Payment
+                      </button>
+                      <button
+                        onClick={() => cancelOrder(order.orderId)}
+                        disabled={isCancelledOrFinal(order)}
+                        className="px-3 py-2 rounded-lg bg-red-50 text-red-600 text-sm hover:bg-red-100 disabled:opacity-60"
+                      >
+                        Cancel Order
+                      </button>
+                    </div>
+                    {orderStatus === "CANCELLED" && (
+                      <div className="mt-3 text-xs text-red-600">This order is already cancelled.</div>
+                    )}
+                  </div>
+                );
+              })}
               {!orders?.length && !loading && (
                 <div className="text-gray-500">No orders yet.</div>
+              )}
+            </div>
+          )}
+
+          {view === "payments" && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <div className="flex flex-col md:flex-row md:items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Order ID</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={paymentLookupOrderId}
+                      onChange={(event) => setPaymentLookupOrderId(event.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="Enter order ID"
+                    />
+                  </div>
+                  <button
+                    onClick={() => loadPaymentByOrderId(paymentLookupOrderId)}
+                    disabled={loadingPayment}
+                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-60"
+                  >
+                    {loadingPayment ? "Loading..." : "Load Payment"}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 mt-3">
+                  Use Pay Now from the Orders screen to create a payment, then return here to view it.
+                </div>
+              </div>
+
+              {paymentDetails ? (
+                <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+                  <div className="flex flex-wrap justify-between gap-3 mb-3">
+                    <div className="font-semibold text-gray-800">Payment #{paymentDetails.paymentId}</div>
+                    <div className="text-sm px-2 py-1 rounded bg-green-50 text-green-700">{paymentDetails.status}</div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
+                    <div><span className="font-medium text-gray-500">Order ID:</span> {paymentDetails.orderId}</div>
+                    <div><span className="font-medium text-gray-500">Amount:</span> {currency(paymentDetails.amount)}</div>
+                    <div><span className="font-medium text-gray-500">Payment Date:</span> {paymentDetails.paymentDate ? new Date(paymentDetails.paymentDate).toLocaleString() : "-"}</div>
+                    <div><span className="font-medium text-gray-500">Status:</span> {paymentDetails.status || "-"}</div>
+                  </div>
+                </div>
+              ) : (
+                !loadingPayment && <div className="text-gray-500">No payment selected.</div>
               )}
             </div>
           )}
