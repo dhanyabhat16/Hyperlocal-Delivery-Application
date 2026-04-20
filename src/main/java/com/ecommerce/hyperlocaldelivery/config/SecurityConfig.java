@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/login.html", "/register.html", "/customer.html", "/warehouse.html", "/delivery.html", "/static/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/delivery/**").permitAll()
+                .requestMatchers("/api/products/**").permitAll()
                 .requestMatchers(
                     "/login.html",
                     "/dashboard.html",

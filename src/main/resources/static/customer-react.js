@@ -386,6 +386,7 @@ function CustomerApp() {
             <div className="space-y-4">
               {(orders || []).map((order) => (
                 <div key={order.orderId} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+
                   <div className="flex flex-wrap justify-between gap-3 mb-3">
                     <div className="font-semibold text-gray-800">Order #{order.orderId}</div>
                     <div className="text-sm px-2 py-1 rounded bg-gray-100 text-gray-700">{order.status}</div>

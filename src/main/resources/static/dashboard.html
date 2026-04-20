@@ -1,112 +1,270 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Dashboard | Hyperlocal</title>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard | Hyperlocal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body class="bg-gray-50 flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div class="p-6 border-b">
-            <h2 class="text-xl font-bold text-indigo-600 italic">Hyperlocal.</h2>
-        </div>
-        <nav class="flex-1 p-4 space-y-2" id="sidebarMenu">
-            </nav>
-        <div class="p-4 border-t">
-            <div id="userProfile" class="flex items-center space-x-3 mb-4 p-2">
-                <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs" id="userInitial">U</div>
-                <div>
-                    <p class="text-sm font-bold text-gray-700" id="userName">User</p>
-                    <p class="text-xs text-gray-400 capitalize" id="userRole">Role</p>
-                </div>
-            </div>
-            <button onclick="logout()" class="w-full flex items-center space-x-2 text-red-500 hover:bg-red-50 p-2 rounded-lg transition text-sm">
-                <i class="fa-solid fa-right-from-bracket"></i>
-                <span>Logout</span>
-            </button>
-        </div>
-    </aside>
+<aside class="w-64 bg-white border-r flex flex-col">
+    <div class="p-6 border-b">
+        <h2 class="text-xl font-bold text-indigo-600 italic">Hyperlocal.</h2>
+    </div>
 
-    <main class="flex-1 overflow-y-auto">
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
-            <h1 class="text-lg font-semibold text-gray-800" id="viewTitle">Dashboard Overview</h1>
-            <div class="flex items-center space-x-4">
-                <div id="cartStatus" class="hidden">
-                    <button class="relative p-2 text-gray-400 hover:text-indigo-600">
-                        <i class="fa-solid fa-cart-shopping"></i>
-                        <span id="cartCount" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] rounded-full px-1.5">0</span>
-                    </button>
-                </div>
-            </div>
-        </header>
+    <div class="p-4 mt-auto border-t">
+        <p class="text-sm font-bold" id="userName">User</p>
+        <p class="text-xs text-gray-400" id="userRole">Role</p>
 
-        <section id="mainContent" class="p-8">
-            </section>
-    </main>
+        <button onclick="logout()" class="w-full mt-4 text-red-500">
+            Logout
+        </button>
+    </div>
+</aside>
 
-    <script>
-        const API_BASE = "http://localhost:8080/hyperlocaldelivery/api";
-        const role = localStorage.getItem("role");
-        const userId = localStorage.getItem("customerId") || localStorage.getItem("userId");
-        const userName = localStorage.getItem("userName") || "User";
+<main class="flex-1 overflow-y-auto">
 
-        // Initialize UI
-        document.getElementById("userName").innerText = userName;
-        document.getElementById("userInitial").innerText = userName.charAt(0);
-        document.getElementById("userRole").innerText = role.toLowerCase();
+<header class="h-16 bg-white border-b flex items-center px-8">
+    <h1 class="text-lg font-semibold">Admin Dashboard</h1>
+</header>
 
-        window.onload = () => {
-            if (role === "CUSTOMER") renderCustomer();
-            else if (role === "DELIVERY") renderDelivery();
-            else if (role === "WAREHOUSE") renderWarehouse();
-            else renderAdmin();
-        };
+<section class="p-8">
 
-        // --- CUSTOMER MODULE ---
-        async function renderCustomer() {
-            document.getElementById("cartStatus").classList.remove("hidden");
-            document.getElementById("viewTitle").innerText = "Browse Products";
-            
-            const response = await fetch(`${API_BASE}/public/products`);
-            const data = await response.json();
-            const products = data?.data || [];
-            
-            let html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-6">`;
-            products.forEach(p => {
-                html += `
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                    <div class="h-32 bg-gray-100 rounded-lg mb-4 flex items-center justify-center text-gray-400 italic">Product Image</div>
-                    <h3 class="font-bold text-gray-800">${p.name}</h3>
-                    <p class="text-xs text-gray-500">${p.category}</p>
-                    <div class="mt-4 flex justify-between items-center">
-                        <span class="text-indigo-600 font-bold">₹${p.price}</span>
-                        <button onclick="addToCart(${p.productId})" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700">Add</button>
-                    </div>
-                </div>`;
-            });
-            html += `</div>`;
-            document.getElementById("mainContent").innerHTML = html;
+    <div class="space-x-4 mb-6">
+        <button onclick="loadUsers()" class="bg-indigo-600 text-white px-4 py-2 rounded">Users</button>
+        <button onclick="loadOrders()" class="bg-indigo-600 text-white px-4 py-2 rounded">Orders</button>
+        <button onclick="loadWarehouses()" class="bg-indigo-600 text-white px-4 py-2 rounded">Warehouses</button>
+        <button onclick="loadInventory()" class="bg-indigo-600 text-white px-4 py-2 rounded">Inventory</button>
+        <button onclick="generateReport()" class="bg-green-600 text-white px-4 py-2 rounded">Report</button>
+    </div>
+
+    <div id="adminData"></div>
+
+</section>
+</main>
+
+<script>
+
+const API_BASE = "http://localhost:8080/hyperlocaldelivery/api";
+const token = localStorage.getItem("token");
+const role = localStorage.getItem("role");
+const userName = localStorage.getItem("userName") || "Admin";
+
+document.getElementById("userName").innerText = userName;
+document.getElementById("userRole").innerText = role || "ADMIN";
+
+const statusFlow = [
+    "PLACED","PACKED","ASSIGNED","PICKED_UP","ON_THE_WAY","DELIVERED"
+];
+
+window.onload = () => {
+    if (!token) {
+        alert("Session expired");
+        window.location.href = "index.html";
+        return;
+    }
+    loadOrders();
+};
+
+function getAllowedStatuses(current) {
+    if (current === "DELIVERED" || current === "CANCELLED") return [current];
+    const index = statusFlow.indexOf(current);
+    return [...statusFlow.slice(index), "CANCELLED"];
+}
+
+function getStatusColor(status) {
+    switch (status) {
+        case "PLACED": return "text-gray-600";
+        case "PACKED": return "text-blue-600";
+        case "ASSIGNED": return "text-purple-600";
+        case "PICKED_UP": return "text-yellow-600";
+        case "ON_THE_WAY": return "text-orange-600";
+        case "DELIVERED": return "text-green-600";
+        case "CANCELLED": return "text-red-600";
+        default: return "";
+    }
+}
+
+async function loadOrders() {
+    const res = await fetch(`${API_BASE}/admin/orders`, {
+        headers: { "Authorization": "Bearer " + token }
+    });
+
+    const data = await res.json();
+    const orders = data.data || [];
+
+    let html = `
+    <table class="w-full border text-center">
+    <tr class="bg-gray-100">
+        <th>Order ID</th>
+        <th>Status</th>
+        <th>Total</th>
+        <th>Update</th>
+    </tr>
+    `;
+
+    orders.forEach(o => {
+        const allowed = getAllowedStatuses(o.status);
+
+        let options = "";
+        allowed.forEach(s => {
+            options += `<option ${s === o.status ? "selected" : ""}>${s}</option>`;
+        });
+
+        const isFinal = o.status === "DELIVERED" || o.status === "CANCELLED";
+
+        html += `
+        <tr>
+            <td>${o.orderId}</td>
+            <td class="${getStatusColor(o.status)} font-semibold">${o.status}</td>
+            <td>₹${o.totalAmount}</td>
+            <td>
+                <select id="status-${o.orderId}" class="border px-2 py-1 rounded" ${isFinal ? "disabled" : ""}>
+                    ${options}
+                </select>
+
+                <button onclick="updateOrderStatus(${o.orderId})"
+                ${isFinal 
+                    ? "disabled class='bg-gray-400 cursor-not-allowed px-3 py-1 rounded ml-2'" 
+                    : "class='bg-green-600 text-white px-3 py-1 rounded ml-2'"}>
+
+                    Update
+                </button>
+            </td>
+        </tr>
+        `;
+    });
+
+    html += "</table>";
+    document.getElementById("adminData").innerHTML = html;
+}
+
+async function updateOrderStatus(orderId) {
+    const newStatus = document.getElementById(`status-${orderId}`).value;
+
+    if (!confirm("Update order status?")) return;
+
+    const res = await fetch(
+        `${API_BASE}/admin/orders/${orderId}/status?status=${newStatus}`,
+        {
+            method: "PUT",
+            headers: { "Authorization": "Bearer " + token }
         }
+    );
 
-        // --- DELIVERY MODULE ---
-        async function renderDelivery() {
-            document.getElementById("viewTitle").innerText = "Delivery Assignments";
-            // ... (Your existing fetch logic for available/assigned orders)
-            // Use Tailwind cards with colored badges for status
-            document.getElementById("mainContent").innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Available for Pickup</h2>
-                        <div id="availableOrders" class="space-y-3 text-gray-500">Scanning for orders...</div>
-                    </div>
-                </div>`;
-        }
+    if (res.ok) {
+        alert("Updated successfully");
+        loadOrders();
+    } else {
+        alert("Update failed");
+    }
+}
 
-        function logout() {
-            localStorage.clear();
-            window.location.href = "index.html";
-        }
-    </script>
+async function loadUsers() {
+    const res = await fetch(`${API_BASE}/admin/users`, {
+        headers: { "Authorization": "Bearer " + token }
+    });
+    const data = await res.json();
+    renderTable(data.data);
+}
+
+async function loadWarehouses() {
+    const res = await fetch(`${API_BASE}/admin/warehouses`, {
+        headers: { "Authorization": "Bearer " + token }
+    });
+    const data = await res.json();
+    renderTable(data.data);
+}
+
+/* 🔥 NEW: INVENTORY */
+async function loadInventory() {
+    const res = await fetch(`${API_BASE}/public/products`);
+    const data = await res.json();
+    const products = data.data || [];
+
+    let html = `
+    <table class="w-full border text-center">
+    <tr class="bg-gray-100">
+        <th>Name</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Status</th>
+    </tr>
+    `;
+
+    products.forEach(p => {
+        html += `
+        <tr>
+            <td>${p.name}</td>
+            <td>₹${p.price}</td>
+            <td>${p.quantity}</td>
+            <td>
+                ${p.quantity < 10 
+                    ? '<span class="text-red-500 font-bold">Low Stock</span>' 
+                    : '<span class="text-green-500">OK</span>'}
+            </td>
+        </tr>
+        `;
+    });
+
+    html += "</table>";
+    document.getElementById("adminData").innerHTML = html;
+}
+
+/* 🔥 NEW: REPORT */
+async function generateReport() {
+    const res = await fetch(`${API_BASE}/public/products`);
+    const data = await res.json();
+    const products = data.data || [];
+
+    const totalProducts = products.length;
+    const totalStock = products.reduce((sum, p) => sum + p.quantity, 0);
+
+    const html = `
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-bold mb-4">Inventory Report</h2>
+        <p><b>Total Products:</b> ${totalProducts}</p>
+        <p><b>Total Stock:</b> ${totalStock}</p>
+    </div>
+    `;
+
+    document.getElementById("adminData").innerHTML = html;
+}
+
+function renderTable(data) {
+    if (!data || data.length === 0) {
+        document.getElementById("adminData").innerHTML = "No data available";
+        return;
+    }
+
+    let html = "<table class='w-full border text-center'><tr>";
+
+    Object.keys(data[0]).forEach(k => {
+        html += `<th class="border px-2">${k}</th>`;
+    });
+
+    html += "</tr>";
+
+    data.forEach(row => {
+        html += "<tr>";
+        Object.values(row).forEach(v => {
+            html += `<td class="border px-2">${v}</td>`;
+        });
+        html += "</tr>";
+    });
+
+    html += "</table>";
+
+    document.getElementById("adminData").innerHTML = html;
+}
+
+function logout() {
+    localStorage.clear();
+    window.location.href = "index.html";
+}
+
+</script>
+
 </body>
 </html>

@@ -22,18 +22,21 @@ public class DeliveryServiceImpl implements IDeliveryService {
     public List<DeliveryDTO> getAssignedOrders(Integer partnerId) {
         List<Delivery> deliveries = deliveryRepository.findByDeliveryPartner_UserId(partnerId);
 
-        return deliveries.stream().map(d ->
-        new DeliveryDTO(
-        d.getDeliveryId(),
-        d.getOrder().getOrderId(),
-        d.getStatus().name(),
-        d.getOrder().getUser().getName(),
-        d.getOrder().getUser().getCity(), // Or specific address field
-        d.getOrder().getItems().stream().map(item -> item.getProduct().getName()).toList(),
-        d.getOrder().getTotalAmount()
-    )
-).toList();
-    }
+        return deliveries.stream().map(d -> {
+    List<String> itemNames = d.getOrder().getItems().stream()
+            .map(item -> item.getProduct().getName())
+            .toList();
+
+    return new DeliveryDTO(
+            d.getDeliveryId(),
+            d.getOrder().getOrderId(),
+            d.getStatus().name(),
+            d.getOrder().getUser().getName(),
+            d.getOrder().getUser().getCity(), // Matches 'address'
+            itemNames,                        // Matches 'itemNames'
+            d.getOrder().getTotalAmount()     // Matches 'totalAmount'
+    );
+}).toList();}
 
     @Override
     public Delivery acceptOrder(Integer deliveryId) {
