@@ -25,21 +25,23 @@
 
 <main class="flex-1 overflow-y-auto">
 
-    <header class="h-16 bg-white border-b flex items-center px-8">
-        <h1 class="text-lg font-semibold">Admin Dashboard</h1>
-    </header>
+<header class="h-16 bg-white border-b flex items-center px-8">
+    <h1 class="text-lg font-semibold">Admin Dashboard</h1>
+</header>
 
-    <section class="p-8">
+<section class="p-8">
 
-        <div class="space-x-4 mb-6">
-            <button onclick="loadUsers()" class="bg-indigo-600 text-white px-4 py-2 rounded">Users</button>
-            <button onclick="loadOrders()" class="bg-indigo-600 text-white px-4 py-2 rounded">Orders</button>
-            <button onclick="loadWarehouses()" class="bg-indigo-600 text-white px-4 py-2 rounded">Warehouses</button>
-        </div>
+    <div class="space-x-4 mb-6">
+        <button onclick="loadUsers()" class="bg-indigo-600 text-white px-4 py-2 rounded">Users</button>
+        <button onclick="loadOrders()" class="bg-indigo-600 text-white px-4 py-2 rounded">Orders</button>
+        <button onclick="loadWarehouses()" class="bg-indigo-600 text-white px-4 py-2 rounded">Warehouses</button>
+        <button onclick="loadInventory()" class="bg-indigo-600 text-white px-4 py-2 rounded">Inventory</button>
+        <button onclick="generateReport()" class="bg-green-600 text-white px-4 py-2 rounded">Report</button>
+    </div>
 
-        <div id="adminData"></div>
+    <div id="adminData"></div>
 
-    </section>
+</section>
 </main>
 
 <script>
@@ -53,12 +55,7 @@ document.getElementById("userName").innerText = userName;
 document.getElementById("userRole").innerText = role || "ADMIN";
 
 const statusFlow = [
-    "PLACED",
-    "PACKED",
-    "ASSIGNED",
-    "PICKED_UP",
-    "ON_THE_WAY",
-    "DELIVERED"
+    "PLACED","PACKED","ASSIGNED","PICKED_UP","ON_THE_WAY","DELIVERED"
 ];
 
 window.onload = () => {
@@ -71,10 +68,7 @@ window.onload = () => {
 };
 
 function getAllowedStatuses(current) {
-    if (current === "DELIVERED" || current === "CANCELLED") {
-        return [current];
-    }
-
+    if (current === "DELIVERED" || current === "CANCELLED") return [current];
     const index = statusFlow.indexOf(current);
     return [...statusFlow.slice(index), "CANCELLED"];
 }
@@ -101,17 +95,16 @@ async function loadOrders() {
     const orders = data.data || [];
 
     let html = `
-        <table class="w-full border text-center">
-            <tr class="bg-gray-100">
-                <th>Order ID</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Update</th>
-            </tr>
+    <table class="w-full border text-center">
+    <tr class="bg-gray-100">
+        <th>Order ID</th>
+        <th>Status</th>
+        <th>Total</th>
+        <th>Update</th>
+    </tr>
     `;
 
     orders.forEach(o => {
-
         const allowed = getAllowedStatuses(o.status);
 
         let options = "";
@@ -122,26 +115,24 @@ async function loadOrders() {
         const isFinal = o.status === "DELIVERED" || o.status === "CANCELLED";
 
         html += `
-            <tr>
-                <td>${o.orderId}</td>
-                <td class="${getStatusColor(o.status)} font-semibold">${o.status}</td>
-                <td>₹${o.totalAmount}</td>
-                <td>
-                    <select id="status-${o.orderId}" 
-                        class="border px-2 py-1 rounded"
-                        ${isFinal ? "disabled" : ""}>
-                        ${options}
-                    </select>
+        <tr>
+            <td>${o.orderId}</td>
+            <td class="${getStatusColor(o.status)} font-semibold">${o.status}</td>
+            <td>₹${o.totalAmount}</td>
+            <td>
+                <select id="status-${o.orderId}" class="border px-2 py-1 rounded" ${isFinal ? "disabled" : ""}>
+                    ${options}
+                </select>
 
-                    <button 
-                        onclick="updateOrderStatus(${o.orderId})"
-                        ${isFinal 
-                            ? "disabled class='bg-gray-400 cursor-not-allowed px-3 py-1 rounded ml-2'" 
-                            : "class='bg-green-600 text-white px-3 py-1 rounded ml-2'"}>
-                        Update
-                    </button>
-                </td>
-            </tr>
+                <button onclick="updateOrderStatus(${o.orderId})"
+                ${isFinal 
+                    ? "disabled class='bg-gray-400 cursor-not-allowed px-3 py-1 rounded ml-2'" 
+                    : "class='bg-green-600 text-white px-3 py-1 rounded ml-2'"}>
+
+                    Update
+                </button>
+            </td>
+        </tr>
         `;
     });
 
@@ -150,7 +141,6 @@ async function loadOrders() {
 }
 
 async function updateOrderStatus(orderId) {
-
     const newStatus = document.getElementById(`status-${orderId}`).value;
 
     if (!confirm("Update order status?")) return;
@@ -187,8 +177,62 @@ async function loadWarehouses() {
     renderTable(data.data);
 }
 
-function renderTable(data) {
+/* 🔥 NEW: INVENTORY */
+async function loadInventory() {
+    const res = await fetch(`${API_BASE}/public/products`);
+    const data = await res.json();
+    const products = data.data || [];
 
+    let html = `
+    <table class="w-full border text-center">
+    <tr class="bg-gray-100">
+        <th>Name</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Status</th>
+    </tr>
+    `;
+
+    products.forEach(p => {
+        html += `
+        <tr>
+            <td>${p.name}</td>
+            <td>₹${p.price}</td>
+            <td>${p.quantity}</td>
+            <td>
+                ${p.quantity < 10 
+                    ? '<span class="text-red-500 font-bold">Low Stock</span>' 
+                    : '<span class="text-green-500">OK</span>'}
+            </td>
+        </tr>
+        `;
+    });
+
+    html += "</table>";
+    document.getElementById("adminData").innerHTML = html;
+}
+
+/* 🔥 NEW: REPORT */
+async function generateReport() {
+    const res = await fetch(`${API_BASE}/public/products`);
+    const data = await res.json();
+    const products = data.data || [];
+
+    const totalProducts = products.length;
+    const totalStock = products.reduce((sum, p) => sum + p.quantity, 0);
+
+    const html = `
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-bold mb-4">Inventory Report</h2>
+        <p><b>Total Products:</b> ${totalProducts}</p>
+        <p><b>Total Stock:</b> ${totalStock}</p>
+    </div>
+    `;
+
+    document.getElementById("adminData").innerHTML = html;
+}
+
+function renderTable(data) {
     if (!data || data.length === 0) {
         document.getElementById("adminData").innerHTML = "No data available";
         return;
